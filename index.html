@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Dashboard — Project Monitoring for Automation Teams</title>
+    <meta name="description" content="Track automation and manufacturing projects without spreadsheet chaos. Workflow steps, supply scope, health scoring, and ISO week scheduling in one dashboard.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="PM Dashboard — Project Monitoring for Automation Teams">
+    <meta property="og:description" content="Track automation projects without spreadsheet chaos. Workflow steps, supply scope, and ISO week scheduling in one place.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://placehold.co/1200x630/1e293b/94a3b8?text=PM+Dashboard">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="PM Dashboard — Project Monitoring for Automation Teams">
+    <meta name="twitter:description" content="Track automation projects without spreadsheet chaos.">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* ---- LANDING PAGE STYLES ---- */
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+
+        .lp-nav {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px; height: 56px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+        }
+        .lp-nav-brand { font-size: 16px; font-weight: 700; color: var(--text-primary); text-decoration: none; }
+        .lp-nav-actions { display: flex; gap: 12px; align-items: center; }
+
+        .lp-hero {
+            padding: 96px 32px 80px;
+            text-align: center;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+        }
+        .lp-eyebrow {
+            display: inline-block;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--primary); margin-bottom: 20px;
+            padding: 4px 12px; border: 1px solid var(--primary);
+            border-radius: 100px; opacity: 0.8;
+        }
+        .lp-headline {
+            font-size: clamp(32px, 5vw, 54px);
+            font-weight: 800; line-height: 1.15;
+            color: var(--text-primary);
+            max-width: 760px; margin: 0 auto 20px;
+        }
+        .lp-headline em { font-style: normal; color: var(--primary); }
+        .lp-subline {
+            font-size: 18px; color: var(--text-secondary); line-height: 1.6;
+            max-width: 560px; margin: 0 auto 36px;
+        }
+        .lp-cta-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .lp-cta-primary {
+            display: inline-block; padding: 14px 32px;
+            background: var(--primary); color: white;
+            font-size: 16px; font-weight: 700;
+            border-radius: var(--radius); text-decoration: none;
+            transition: opacity 0.15s;
+        }
+        .lp-cta-primary:hover { opacity: 0.88; }
+        .lp-cta-secondary {
+            display: inline-block; padding: 14px 28px;
+            color: var(--text-primary); font-size: 15px; font-weight: 500;
+            border: 1px solid var(--border); border-radius: var(--radius);
+            text-decoration: none; background: var(--bg-primary);
+            transition: border-color 0.15s;
+        }
+        .lp-cta-secondary:hover { border-color: var(--primary); }
+        .lp-free-note { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
+
+        /* Mock dashboard preview */
+        .lp-preview {
+            max-width: 900px; margin: 56px auto 0;
+            border: 1px solid var(--border); border-radius: 12px;
+            overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+            background: var(--bg-secondary);
+        }
+        .lp-preview-bar {
+            height: 36px; background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 16px; gap: 8px;
+        }
+        .lp-preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .lp-preview-url {
+            flex: 1; height: 20px; background: var(--bg-primary);
+            border-radius: 4px; margin: 0 16px;
+            display: flex; align-items: center; padding: 0 10px;
+            font-size: 11px; color: var(--text-muted);
+        }
+        .lp-preview-content { padding: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .lp-mock-card {
+            background: var(--bg-primary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px;
+        }
+        .lp-mock-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
+        .lp-mock-tag.green { background: var(--green-bg); color: var(--green-text); }
+        .lp-mock-tag.yellow { background: var(--yellow-bg); color: var(--yellow-text); }
+        .lp-mock-tag.red { background: var(--red-bg); color: var(--red-text); }
+        .lp-mock-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+        .lp-mock-bar { height: 4px; border-radius: 2px; margin-bottom: 4px; }
+        .lp-mock-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 6px; }
+        .lp-mock-step { font-size: 10px; color: var(--text-muted); padding: 3px 0; border-bottom: 1px solid var(--border); }
+        .lp-mock-step.active { color: var(--primary); font-weight: 600; }
+
+        /* Features */
+        .lp-features {
+            padding: 80px 32px;
+            max-width: 1040px; margin: 0 auto;
+        }
+        .lp-section-label {
+            text-align: center; font-size: 12px; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 12px;
+        }
+        .lp-section-title {
+            text-align: center; font-size: clamp(24px, 3vw, 36px);
+            font-weight: 800; color: var(--text-primary); margin-bottom: 56px;
+        }
+        .lp-features-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+        }
+        .lp-feature {
+            padding: 28px; border: 1px solid var(--border);
+            border-radius: var(--radius); background: var(--bg-secondary);
+        }
+        .lp-feature-icon { font-size: 28px; margin-bottom: 14px; display: block; }
+        .lp-feature h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 8px; }
+        .lp-feature p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+        .lp-feature-badge {
+            display: inline-block; margin-top: 12px;
+            font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+            text-transform: uppercase; padding: 2px 8px;
+            border-radius: 4px; color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        /* How it works */
+        .lp-steps {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 80px 32px;
+        }
+        .lp-steps-inner { max-width: 720px; margin: 0 auto; }
+        .lp-step-list { display: flex; flex-direction: column; gap: 0; margin-top: 48px; }
+        .lp-step {
+            display: flex; gap: 24px; padding: 28px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .lp-step:last-child { border-bottom: none; }
+        .lp-step-num {
+            width: 36px; height: 36px; min-width: 36px;
+            border-radius: 50%; background: var(--primary);
+            color: white; font-size: 14px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .lp-step-body h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 4px 0 6px; }
+        .lp-step-body p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+        /* CTA banner */
+        .lp-cta-banner {
+            padding: 96px 32px; text-align: center;
+        }
+        .lp-cta-banner h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; color: var(--text-primary); margin-bottom: 16px; }
+        .lp-cta-banner p { font-size: 17px; color: var(--text-secondary); margin-bottom: 36px; }
+
+        /* Footer */
+        .lp-footer {
+            border-top: 1px solid var(--border);
+            padding: 28px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 12px; color: var(--text-muted);
+            flex-wrap: wrap; gap: 12px;
+        }
+        .lp-footer a { color: var(--text-muted); text-decoration: none; }
+        .lp-footer a:hover { color: var(--primary); }
+
+        @media (max-width: 768px) {
+            .lp-hero { padding: 60px 20px 48px; }
+            .lp-features-grid { grid-template-columns: 1fr; gap: 16px; }
+            .lp-preview-content { grid-template-columns: 1fr; }
+            .lp-preview-content .lp-mock-card:nth-child(n+2) { display: none; }
+            .lp-nav { padding: 0 16px; }
+            .lp-footer { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- NAV -->
+    <nav class="lp-nav">
+        <a href="/" class="lp-nav-brand">📊 PM Dashboard</a>
+        <div class="lp-nav-actions">
+            <a href="login.html" class="lp-cta-secondary" style="padding: 8px 18px; font-size:14px;">Sign in</a>
+            <a href="login.html#register" class="lp-cta-primary" style="padding: 8px 18px; font-size:14px;">Get started free</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="lp-hero">
+        <span class="lp-eyebrow">For engineering project managers</span>
+        <h1 class="lp-headline">
+            Track automation projects<br>
+            <em>without the spreadsheet chaos</em>
+        </h1>
+        <p class="lp-subline">
+            One dashboard for every project: workflow steps, supply scope, health scoring, and ISO week scheduling — built specifically for automation and manufacturing PMs.
+        </p>
+        <div class="lp-cta-group">
+            <a href="login.html" class="lp-cta-primary">Start free — no credit card</a>
+            <a href="#how-it-works" class="lp-cta-secondary">See how it works</a>
+        </div>
+        <p class="lp-free-note">Free to start · Setup in under 5 minutes · Your data stays in the EU</p>
+
+        <!-- MOCK DASHBOARD PREVIEW -->
+        <div class="lp-preview">
+            <div class="lp-preview-bar">
+                <div class="lp-preview-dot" style="background:#ef4444;"></div>
+                <div class="lp-preview-dot" style="background:#f59e0b;"></div>
+                <div class="lp-preview-dot" style="background:#22c55e;"></div>
+                <div class="lp-preview-url">pm-dashboard.app/dashboard</div>
+            </div>
+            <div class="lp-preview-content">
+                <!-- Card 1: On Track -->
+                <div class="lp-mock-card">
+                    <div class="lp-mock-tag green">● On Track</div>
+                    <div class="lp-mock-title">AMR Fleet — Bosch Plant 4</div>
+                    <div class="lp-mock-bar" style="background:var(--green-bg); width:75%;"></div>
+                    <div class="lp-mock-row"><span>8 / 19 steps</span><span>Due W22</span></div>
+                    <div style="margin-top:10px;">
+                        <div class="lp-mock-step">✓ 6.0 Internal Kick-off</div>
+                        <div class="lp-mock-step active">▶ 7.0 External Kick-off · W14–W15</div>
+                        <div class="lp-mock-step">○ 8.0 Email Recap After Meeting</div>
+                    </div>
+                </div>
+                <!-- Card 2: Attention -->
+                <div class="lp-mock-card">
+                    <div class="lp-mock-tag yellow">⚠ Attention</div>
+                    <div class="lp-mock-title">AGV Retrofit — Logistics Hub</div>
+                    <div class="lp-mock-bar" style="background:var(--yellow-bg); width:40%;"></div>
+                    <div class="lp-mock-row"><span>4 / 19 steps</span><span>Est. W29</span></div>
+                    <div style="margin-top:10px;">
+                        <div class="lp-mock-step">✓ 3.0 Masterplan Update</div>
+                        <div class="lp-mock-step active">▶ 4.0 Project update in SAP · W16–W17</div>
+                        <div class="lp-mock-step">○ 5.0 Document Registration</div>
+                    </div>
+                </div>
+                <!-- Card 3: Healthy -->
+                <div class="lp-mock-card">
+                    <div class="lp-mock-tag green">● On Track</div>
+                    <div class="lp-mock-title">Vision System — Final Line</div>
+                    <div class="lp-mock-bar" style="background:var(--green-bg); width:90%;"></div>
+                    <div class="lp-mock-row"><span>16 / 19 steps</span><span>Due W18</span></div>
+                    <div style="margin-top:10px;">
+                        <div class="lp-mock-step">✓ 15.0 Final Repository Update</div>
+                        <div class="lp-mock-step active">▶ 16.0 Handover to Service · W17</div>
+                        <div class="lp-mock-step">○ 17.0 Project Closing</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="lp-features">
+        <p class="lp-section-label">What you get</p>
+        <h2 class="lp-section-title">Built for the way automation PMs actually work</h2>
+        <div class="lp-features-grid">
+            <div class="lp-feature">
+                <span class="lp-feature-icon">📅</span>
+                <h3>Step Timeline with ISO weeks</h3>
+                <p>Set working-day durations for each workflow step. Get an instant estimated close week — W14, W22 — so you can communicate timelines without opening a calendar.</p>
+                <span class="lp-feature-badge">Key differentiator</span>
+            </div>
+            <div class="lp-feature">
+                <span class="lp-feature-icon">🟢</span>
+                <h3>Real health scoring</h3>
+                <p>Health is calculated from your Step Timeline estimate vs the project target date — not from a manual RAG status you forget to update. Critical, Attention, or On Track — always accurate.</p>
+            </div>
+            <div class="lp-feature">
+                <span class="lp-feature-icon">📦</span>
+                <h3>Supply scope per project</h3>
+                <p>Track every technology and component: AMR, AGV, software, conveyors. Status per item from Ordered to Delivered. No more digging through emails to find what arrived.</p>
+            </div>
+            <div class="lp-feature">
+                <span class="lp-feature-icon">✅</span>
+                <h3>19-step workflow tracking</h3>
+                <p>From Receipt of PO to Internal Retrospective — the complete lifecycle of an automation project, pre-configured and fully customizable for your team's process.</p>
+            </div>
+            <div class="lp-feature">
+                <span class="lp-feature-icon">🔒</span>
+                <h3>One dashboard per company</h3>
+                <p>Each organization sees only its own projects. Data is isolated with row-level security in the database. Your client projects stay private.</p>
+            </div>
+            <div class="lp-feature">
+                <span class="lp-feature-icon">⚙️</span>
+                <h3>Fully configurable</h3>
+                <p>Customize workflow steps, technology types, brands, supply statuses, and priority levels to match exactly how your team works. Settings sync instantly.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="lp-steps" id="how-it-works">
+        <div class="lp-steps-inner">
+            <p class="lp-section-label">How it works</p>
+            <h2 class="lp-section-title" style="text-align:center;">From signup to first project in 5 minutes</h2>
+            <div class="lp-step-list">
+                <div class="lp-step">
+                    <div class="lp-step-num">1</div>
+                    <div class="lp-step-body">
+                        <h3>Create your account</h3>
+                        <p>Register with your work email. Your organization is created automatically — no IT setup, no invite codes, no waiting. A demo project is ready to explore the moment you log in.</p>
+                    </div>
+                </div>
+                <div class="lp-step">
+                    <div class="lp-step-num">2</div>
+                    <div class="lp-step-body">
+                        <h3>Add your first real project</h3>
+                        <p>Enter the project name, client, supply scope (technologies and brands), and a target end date. The 19-step workflow is pre-loaded and ready to use.</p>
+                    </div>
+                </div>
+                <div class="lp-step">
+                    <div class="lp-step-num">3</div>
+                    <div class="lp-step-body">
+                        <h3>Open the Step Timeline</h3>
+                        <p>Click the 📅 icon on any project. Set working-day durations for each pending step. The dashboard calculates your estimated close week automatically — W14, W22, whatever it is — and flags the health status based on your target date.</p>
+                    </div>
+                </div>
+                <div class="lp-step">
+                    <div class="lp-step-num">4</div>
+                    <div class="lp-step-body">
+                        <h3>Track and update as you go</h3>
+                        <p>Check off workflow steps as they complete. Update supply statuses. Adjust step durations when timelines shift. The health score recalculates instantly — no manual RAG updates.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA BANNER -->
+    <section class="lp-cta-banner">
+        <h2>Ready to drop the spreadsheet?</h2>
+        <p>Free to start. No credit card. Your projects, under control.</p>
+        <a href="login.html" class="lp-cta-primary" style="font-size:17px; padding:16px 40px;">Get started free</a>
+        <p class="lp-free-note" style="margin-top:16px;">Data stored in the EU · GDPR compliant · <a href="legal.html#privacy" style="color:var(--text-muted);">Privacy Policy</a></p>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="lp-footer">
+        <span>© 2026 PM Dashboard</span>
+        <div style="display:flex; gap:20px;">
+            <a href="legal.html#tos">Terms of Service</a>
+            <a href="legal.html#privacy">Privacy Policy</a>
+            <a href="login.html">Sign in</a>
+        </div>
+    </footer>
+
+    <script>
+        // Apply saved theme
+        const t = localStorage.getItem('pm-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+    </script>
+</body>
+
+</html>

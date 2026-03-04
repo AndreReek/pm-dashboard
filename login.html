@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Dashboard — Login</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <div class="login-page">
+        <div class="login-card">
+            <h1>📊 PM Dashboard</h1>
+            <p class="subtitle">Project monitoring made simple</p>
+
+            <!-- Tabs -->
+            <div class="login-tabs">
+                <button class="login-tab active" onclick="switchTab('login')">Sign In</button>
+                <button class="login-tab" onclick="switchTab('register')">Create Account</button>
+            </div>
+
+            <!-- Error -->
+            <div id="errorBox" class="login-error"></div>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" class="login-form" onsubmit="handleLogin(event)">
+                <div>
+                    <label class="form-label">Email</label>
+                    <input type="email" id="loginEmail" class="form-input" placeholder="you@company.com" required>
+                </div>
+                <div>
+                    <label class="form-label">Password</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+                    <a href="#" onclick="handleForgotPassword(event)" style="font-size:12px; color:var(--primary); text-decoration:none; display:block; text-align:right; margin-top:4px;">Forgot password?</a>
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="registerForm" class="login-form" style="display:none;" onsubmit="handleRegister(event)">
+                <div>
+                    <label class="form-label">Organization Name</label>
+                    <input type="text" id="regOrg" class="form-input" placeholder="e.g. Acme Corp" required>
+                </div>
+                <div>
+                    <label class="form-label">Email</label>
+                    <input type="email" id="regEmail" class="form-input" placeholder="you@company.com" required>
+                </div>
+                <div>
+                    <label class="form-label">Password</label>
+                    <input type="password" id="regPassword" class="form-input" placeholder="Min. 6 characters" required
+                        minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary" id="regBtn">Create Account</button>
+            </form>
+        </div>
+        <p style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:16px;">
+            By signing up you agree to our <a href="legal.html#tos" target="_blank" style="color:var(--primary);">Terms of Service</a>
+            and <a href="legal.html#privacy" target="_blank" style="color:var(--primary);">Privacy Policy</a>.
+        </p>
+    </div>
+
+    <script>
+        // ---- CONFIG ----
+        const SUPABASE_URL = 'https://ikgybeldlngntrpyzcnh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_RodF4T3p7nW1AVdkAmm3Lg_78pL2uPv';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Check if already logged in
+        (async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) window.location.href = 'dashboard.html';
+        })();
+
+        // Default settings to clone for new orgs
+        const DEFAULT_SETTINGS = [
+            { key: 'tecnologie', value: ["AMR", "AGV", "Automated Wrapper", "Software", "Conveyor", "Vision System"] },
+            { key: 'brand', value: ["Agilox", "Kivnon", "Omron", "Otto", "Pieri", "Login Automation"] },
+            { key: 'stati_fornitura', value: ["Undefined", "Ordered", "In Stock", "Staged", "FAT Done", "Shipped", "Delivered"] },
+            { key: 'workflow_steps', value: ["1.0 Receipt of PO", "2.0 Internal Start-up", "3.0 Masterplan Update", "4.0 Project update in SAP", "5.0 Document Registration", "6.0 Internal Kick-off", "7.0 External Kick-off", "8.0 Email Recap After Meeting", "9.0 Documentation Sending", "10.0 FAT", "11.0 Project Charter Creation", "12.0 Share with Commissioning", "13.0 Pre-commissioning Meeting", "14.0 Commissioning & SAT", "15.0 Final Repository Update", "16.0 Handover to Service", "17.0 Project Closing", "18.0 Internal Retrospective", "19.0 Follow-up KA Meeting"] },
+            { key: 'categorie', value: ["executive", "trial", "non-project"] },
+            { key: 'priorita', value: ["high", "medium", "low"] }
+        ];
+
+        function switchTab(tab) {
+            document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
+            document.getElementById('registerForm').style.display = tab === 'register' ? 'flex' : 'none';
+            document.querySelectorAll('.login-tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+            });
+            hideError();
+        }
+
+        function showError(msg) {
+            const box = document.getElementById('errorBox');
+            box.textContent = msg;
+            box.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorBox').style.display = 'none';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = loading;
+            btn.textContent = loading ? 'Please wait...' : (btnId === 'loginBtn' ? 'Sign In' : 'Create Account');
+        }
+
+        // ---- FORGOT PASSWORD ----
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            if (!email) { showError('Enter your email address first, then click "Forgot password?".'); return; }
+            hideError();
+            const { error } = await db.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/dashboard.html'
+            });
+            if (error) { showError(error.message); return; }
+            document.getElementById('errorBox').style.background = 'var(--green-bg)';
+            document.getElementById('errorBox').style.color = 'var(--green-text)';
+            document.getElementById('errorBox').style.display = 'block';
+            document.getElementById('errorBox').textContent = 'Password reset email sent — check your inbox.';
+        }
+
+        // ---- LOGIN ----
+        async function handleLogin(e) {
+            e.preventDefault();
+            hideError();
+            setLoading('loginBtn', true);
+
+            try {
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+
+                window.location.href = 'dashboard.html';
+            } catch (err) {
+                showError(err.message || 'Login failed. Check your credentials.');
+            } finally {
+                setLoading('loginBtn', false);
+            }
+        }
+
+        // ---- REGISTER ----
+        async function handleRegister(e) {
+            e.preventDefault();
+            hideError();
+            setLoading('regBtn', true);
+
+            try {
+                const orgName = document.getElementById('regOrg').value.trim();
+                const email = document.getElementById('regEmail').value;
+                const password = document.getElementById('regPassword').value;
+
+                if (!orgName) throw new Error('Organization name is required.');
+
+                // 1. Sign up
+                const { data: authData, error: authError } = await db.auth.signUp({ email, password });
+                if (authError) throw authError;
+
+                // If email confirmation is required, tell the user
+                if (!authData.session) {
+                    showError('Check your email to confirm your account, then sign in.');
+                    switchTab('login');
+                    setLoading('regBtn', false);
+                    return;
+                }
+
+                // 2. Create organization
+                const { data: org, error: orgError } = await db
+                    .from('organizations')
+                    .insert([{ name: orgName }])
+                    .select()
+                    .single();
+                if (orgError) throw orgError;
+
+                // 3. Link user to org
+                const { error: memberError } = await db
+                    .from('org_members')
+                    .insert([{ user_id: authData.user.id, org_id: org.id, role: 'admin' }]);
+                if (memberError) throw memberError;
+
+                // 4. Clone default settings for this org
+                const settingsRows = DEFAULT_SETTINGS.map(s => ({ ...s, org_id: org.id }));
+                const { error: settingsError } = await db
+                    .from('Settings')
+                    .insert(settingsRows);
+                if (settingsError) throw settingsError;
+
+                // 5. Redirect to dashboard
+                window.location.href = 'dashboard.html';
+
+            } catch (err) {
+                showError(err.message || 'Registration failed. Please try again.');
+            } finally {
+                setLoading('regBtn', false);
+            }
+        }
+    </script>
+</body>
+
+</html>

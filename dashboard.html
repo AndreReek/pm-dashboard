@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- SIDEBAR BACKDROP (mobile) -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <h2>📊 PM Dashboard</h2>
+                <small>Project Monitoring</small>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="sidebar-link active" onclick="closeSidebar()">
+                    <span class="icon">📋</span> Dashboard
+                </button>
+                <button class="sidebar-link" onclick="openSettingsModal(); closeSidebar();">
+                    <span class="icon">⚙️</span> Settings
+                </button>
+                <div style="flex:1;"></div>
+                <button class="sidebar-link" onclick="handleLogout()">
+                    <span class="icon">🚪</span> Logout
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="avatar" id="userAvatar">?</div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Loading...</div>
+                        <div class="user-org" id="userOrg">—</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <div class="topbar">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                    <div class="topbar-left">
+                        <h1>Projects</h1>
+                        <p>Workflow & Supply Monitoring</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode"
+                        id="themeBtn">🌙</button>
+                    <button class="btn btn-primary" onclick="openAddModal()">➕ New Project</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- SUMMARY CARDS -->
+                <div class="summary-row" id="summaryRow">
+                    <div class="summary-card">
+                        <div class="label">Total Projects</div>
+                        <div class="value" id="sumTotal">—</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">Active</div>
+                        <div class="value" id="sumActive">—</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">At Risk</div>
+                        <div class="value" id="sumRisk">—</div>
+                        <div class="sub" id="sumRiskSub"></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">Avg. Workflow</div>
+                        <div class="value" id="sumWorkflow">—</div>
+                    </div>
+                </div>
+
+                <!-- PROJECT LIST -->
+                <div id="projectsContainer">
+                    <div class="empty-state">
+                        <div class="icon">⏳</div>
+                        <h3>Loading from Cloud...</h3>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- PROJECT MODAL -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-box">
+            <h2 id="modalTitle">Configure Project</h2>
+            <div class="form-grid form-grid-2">
+                <div><label class="form-label">Project Name</label><input type="text" id="projectName"
+                        class="form-input"></div>
+                <div><label class="form-label">Client</label><input type="text" id="projectClient" class="form-input">
+                </div>
+            </div>
+            <div class="form-grid form-grid-2" style="margin-top:16px;">
+                <div><label class="form-label">Status</label>
+                    <select id="mainStatus" class="form-select" onchange="toggleCategory()">
+                        <option value="active">Active</option>
+                        <option value="pipeline">Pipeline</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+                <div id="catGroup"><label class="form-label">Category</label>
+                    <select id="projectCategory" class="form-select"></select>
+                </div>
+            </div>
+            <div style="margin-top:16px;"><label class="form-label">Priority</label>
+                <select id="projectPriority" class="form-select"></select>
+            </div>
+
+            <h3 style="margin: 24px 0 12px; font-size: 15px; font-weight: 700;">📦 Supply Scope</h3>
+            <div id="supplyRowsContainer"></div>
+            <button class="btn btn-secondary" onclick="addSupplyRow()" style="margin-top:4px;">➕ Add Technology</button>
+
+            <div class="form-grid form-grid-3"
+                style="margin-top:20px; padding-top:20px; border-top:1px solid var(--border);">
+                <div><label class="form-label">Delay (days)</label><input type="number" id="projectDelay"
+                        class="form-input" value="0"></div>
+                <div><label class="form-label">Quality</label>
+                    <select id="projectQuality" class="form-select">
+                        <option value="green">Green</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="red">Red</option>
+                    </select>
+                </div>
+                <div><label class="form-label">High Risks</label><input type="number" id="projectRisks"
+                        class="form-input" value="0"></div>
+            </div>
+            <div class="form-grid form-grid-2" style="margin-top:16px;">
+                <div><label class="form-label">Action Required</label>
+                    <textarea id="projectAction" class="form-textarea"></textarea>
+                </div>
+                <div><label class="form-label">Target End Date</label>
+                    <input type="date" id="projectDueDate" class="form-input">
+                    <small style="color:var(--text-muted);font-size:11px;">Used for health scoring</small>
+                </div>
+            </div>
+            <div style="display:flex; gap:12px; margin-top:24px;">
+                <button class="btn btn-primary" style="flex:2;" onclick="saveProject()" id="saveBtn">Save
+                    Project</button>
+                <button class="btn btn-secondary" style="flex:1;" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-box" style="max-width:700px;">
+            <h2>⚙️ Dashboard Settings</h2>
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">Customize fields for your
+                organization. Changes are saved instantly.</p>
+            <div id="settingsContainer"></div>
+            <div style="margin-top:24px;">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()" style="width:100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---- CONFIG ----
+        const SUPABASE_URL = 'https://ikgybeldlngntrpyzcnh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_RodF4T3p7nW1AVdkAmm3Lg_78pL2uPv';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ---- STATE ----
+        let projects = [];
+        let editingId = null;
+        let currentOrgId = null;
+        let currentUser = null;
+        let currentOrgName = '';
+        const openTimelinePanels = new Set(); // persists open Step Timeline panels across re-renders
+
+        let TECHS = [], BRANDS = [], STATUSES = [], WORKFLOW_STEPS = [], CATEGORIE = [], PRIORITA = [];
+
+        const SETTINGS_LABELS = {
+            tecnologie: '🔧 Technologies', brand: '🏭 Brands / Suppliers',
+            stati_fornitura: '📦 Supply States', workflow_steps: '📋 Workflow Steps',
+            categorie: '🏷️ Project Categories', priorita: '🎯 Priority Levels'
+        };
+
+        const STATUS_LABELS = { active: 'Active', pipeline: 'Pipeline', closed: 'Closed' };
+
+        // ---- TOAST ----
+        function toast(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `toast toast-${type}`;
+            el.textContent = msg;
+            document.getElementById('toastContainer').appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        // ---- DATE UTILITIES ----
+        function isoWeek(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+            const jan4 = new Date(d.getFullYear(), 0, 4);
+            return [d.getFullYear(), 1 + Math.round(((d - jan4) / 86400000 - 3 + (jan4.getDay() + 6) % 7) / 7)];
+        }
+        function weekLabel(date) {
+            const [yr, wk] = isoWeek(date);
+            const thisYear = new Date().getFullYear();
+            return yr === thisYear ? `W${wk}` : `W${wk} ${yr}`;
+        }
+        function addWorkingDays(date, days) {
+            const d = new Date(date);
+            d.setHours(12, 0, 0, 0);
+            while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+            for (let i = 0; i < days; i++) {
+                d.setDate(d.getDate() + 1);
+                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+            }
+            return d;
+        }
+
+        // ---- THEME ----
+        function toggleTheme() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+            localStorage.setItem('pm-theme', isDark ? 'light' : 'dark');
+        }
+
+        // Apply saved theme
+        const savedTheme = localStorage.getItem('pm-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        if (savedTheme === 'dark') document.getElementById('themeBtn').textContent = '☀️';
+
+        // ---- SIDEBAR (mobile) ----
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarBackdrop').classList.toggle('active');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarBackdrop').classList.remove('active');
+        }
+
+        // Default settings for auto-provisioning
+        const DEFAULT_SETTINGS = [
+            { key: 'tecnologie', value: ["AMR", "AGV", "Automated Wrapper", "Software", "Conveyor", "Vision System"] },
+            { key: 'brand', value: ["Agilox", "Kivnon", "Omron", "Otto", "Pieri", "Login Automation"] },
+            { key: 'stati_fornitura', value: ["Undefined", "Ordered", "In Stock", "Staged", "FAT Done", "Shipped", "Delivered"] },
+            { key: 'workflow_steps', value: ["1.0 Receipt of PO", "2.0 Internal Start-up", "3.0 Masterplan Update", "4.0 Project update in SAP", "5.0 Document Registration", "6.0 Internal Kick-off", "7.0 External Kick-off", "8.0 Email Recap After Meeting", "9.0 Documentation Sending", "10.0 FAT", "11.0 Project Charter Creation", "12.0 Share with Commissioning", "13.0 Pre-commissioning Meeting", "14.0 Commissioning & SAT", "15.0 Final Repository Update", "16.0 Handover to Service", "17.0 Project Closing", "18.0 Internal Retrospective", "19.0 Follow-up KA Meeting"] },
+            { key: 'categorie', value: ["executive", "trial", "non-project"] },
+            { key: 'priorita', value: ["high", "medium", "low"] }
+        ];
+
+        // ---- AUTH GUARD + INIT ----
+        async function init() {
+            console.log('[INIT] Checking session...');
+            const { data: { session }, error: sessErr } = await db.auth.getSession();
+            console.log('[INIT] Session:', session ? 'Found (user: ' + session.user.email + ')' : 'None', sessErr || '');
+
+            if (!session) {
+                console.log('[INIT] No session, redirecting to login');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentUser = session.user;
+
+            // Get user's org
+            const { data: memberships, error: memErr } = await db
+                .from('org_members')
+                .select('org_id, role')
+                .eq('user_id', currentUser.id);
+
+            console.log('[INIT] Memberships:', memberships, memErr || '');
+
+            if (memErr || !memberships || memberships.length === 0) {
+                console.warn('[INIT] No org found. Auto-provisioning organization...');
+                toast('Setting up your organization...', 'info');
+
+                // Auto-create org for orphan user
+                const orgName = currentUser.email.split('@')[1] || 'My Organization';
+                const { data: org, error: orgErr } = await db.from('organizations').insert([{ name: orgName }]).select().single();
+                if (orgErr) { console.error('Failed to create org:', orgErr); toast('Setup failed. Try registering again.', 'error'); return; }
+
+                const { error: memInsErr } = await db.from('org_members').insert([{ user_id: currentUser.id, org_id: org.id, role: 'admin' }]);
+                if (memInsErr) { console.error('Failed to link user:', memInsErr); }
+
+                // Clone default settings
+                const settingsRows = DEFAULT_SETTINGS.map(s => ({ ...s, org_id: org.id }));
+                await db.from('Settings').insert(settingsRows);
+
+                currentOrgId = org.id;
+                currentOrgName = orgName;
+                console.log('[INIT] Auto-provisioned org:', orgName, 'id:', org.id);
+                toast('Organization created: ' + orgName, 'success');
+            } else {
+                currentOrgId = memberships[0].org_id;
+                const { data: org } = await db.from('organizations').select('name').eq('id', currentOrgId).single();
+                currentOrgName = org?.name || 'My Organization';
+            }
+
+            // Update sidebar user info
+            const email = currentUser.email;
+            document.getElementById('userAvatar').textContent = email.charAt(0).toUpperCase();
+            document.getElementById('userName').textContent = email;
+            document.getElementById('userOrg').textContent = currentOrgName;
+            console.log('[INIT] User:', email, '| Org:', currentOrgName, '| OrgId:', currentOrgId);
+
+            await loadSettings();
+            populateFormDropdowns();
+            await fetchProjects();
+        }
+
+        async function handleLogout() {
+            await db.auth.signOut();
+            window.location.href = 'login.html';
+        }
+
+        // ---- SETTINGS ----
+        async function loadSettings() {
+            try {
+                const { data, error } = await db.from('Settings').select('*').eq('org_id', currentOrgId);
+                if (error) throw error;
+                if (data) {
+                    data.forEach(row => {
+                        switch (row.key) {
+                            case 'tecnologie': TECHS = row.value; break;
+                            case 'brand': BRANDS = row.value; break;
+                            case 'stati_fornitura': STATUSES = row.value; break;
+                            case 'workflow_steps': WORKFLOW_STEPS = row.value; break;
+                            case 'categorie': CATEGORIE = row.value; break;
+                            case 'priorita': PRIORITA = row.value; break;
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Settings load error:', err);
+                // Fallback defaults
+                TECHS = ["AMR", "AGV", "Software"]; BRANDS = ["Agilox", "Omron"]; STATUSES = ["Undefined", "Ordered", "Shipped"];
+                WORKFLOW_STEPS = ["1.0 Receipt of PO", "2.0 Internal Start-up", "3.0 Closing"];
+                CATEGORIE = ["executive", "trial", "non-project"]; PRIORITA = ["high", "medium", "low"];
+            }
+        }
+
+        function populateFormDropdowns() {
+            document.getElementById('projectCategory').innerHTML = '<option value="">--</option>' + CATEGORIE.map(c => `<option value="${c}">${c.replace(/_/g, ' ')}</option>`).join('');
+            document.getElementById('projectPriority').innerHTML = PRIORITA.map((p, i) => `<option value="${p}" ${i === 1 ? 'selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join('');
+        }
+
+        // ---- PROJECTS ----
+        async function fetchProjects() {
+            try {
+                const { data, error } = await db.from('projects').select('*').eq('org_id', currentOrgId).order('created_at', { ascending: false });
+                if (error) throw error;
+                const italianQuality = { verde: 'green', giallo: 'yellow', rosso: 'red' };
+                const italianPriority = { alta: 'high', media: 'medium', bassa: 'low' };
+                const italianStatus = { indefinito: 'undefined', ordinato: 'ordered', in_stock: 'in_stock', allestito: 'staged', fat_done: 'fat_done', spedito: 'shipped', consegnato: 'delivered' };
+                projects = (data || []).map(p => ({
+                    ...p,
+                    statoQualita: italianQuality[p.statoQualita] ?? p.statoQualita,
+                    priorita: italianPriority[p.priorita] ?? p.priorita,
+                    supplyScope: (p.supplyScope || []).map(s => ({ ...s, status: italianStatus[s.status] ?? s.status }))
+                }));
+                if (projects.length === 0) await createDemoProject();
+                updateSummary();
+                renderProjects();
+            } catch (err) {
+                console.error('Fetch error:', err);
+                document.getElementById('projectsContainer').innerHTML = '<div class="empty-state"><div class="icon">❌</div><h3>Connection Error</h3><p>Check console (F12) for details.</p></div>';
+            }
+        }
+
+        async function createDemoProject() {
+            // Computes a due date ~6 months from now
+            const due = new Date();
+            due.setMonth(due.getMonth() + 6);
+            const dueStr = due.toISOString().split('T')[0];
+            const steps = WORKFLOW_STEPS.length > 0 ? WORKFLOW_STEPS : DEFAULT_SETTINGS.find(s => s.key === 'workflow_steps').value;
+            const milestones = steps.map((_, i) => i < 3); // first 3 steps done
+            const demo = {
+                nome: 'DEMO — AMR Fleet Deployment',
+                cliente: 'Sample Client',
+                mainStatus: 'active',
+                category: 'executive',
+                priorita: 'high',
+                ritardoGiorni: 0,
+                statoQualita: 'green',
+                rischiAlti: 1,
+                azioneRichiesta: 'This is a demo project. Edit or delete it to get started.',
+                supplyScope: [
+                    { tech: 'AMR', brand: 'Agilox', units: 4, status: 'ordered' },
+                    { tech: 'Software', brand: 'Login Automation', units: 1, status: 'delivered' }
+                ],
+                milestones,
+                stepDurations: steps.map(() => 5),
+                dueDate: dueStr,
+                org_id: currentOrgId
+            };
+            const { data } = await db.from('projects').insert([demo]).select();
+            if (data && data[0]) projects = [data[0]];
+        }
+
+        function updateSummary() {
+            const total = projects.length;
+            const active = projects.filter(p => p.mainStatus === 'active').length;
+            const atRisk = projects.filter(p => { const h = getHealth(p); return h.level === 'critical' || h.level === 'warning'; }).length;
+            const avgWf = total > 0 ? Math.round(projects.reduce((sum, p) => {
+                const ms = p.milestones || [];
+                return sum + (WORKFLOW_STEPS.length > 0 ? (ms.filter(m => m).length / WORKFLOW_STEPS.length) * 100 : 0);
+            }, 0) / total) : 0;
+
+            document.getElementById('sumTotal').textContent = total;
+            document.getElementById('sumActive').textContent = active;
+            document.getElementById('sumRisk').textContent = atRisk;
+            document.getElementById('sumRiskSub').textContent = atRisk > 0 ? 'Need attention' : 'All good';
+            document.getElementById('sumWorkflow').textContent = avgWf + '%';
+        }
+
+        function toggleCategory() { document.getElementById('catGroup').style.display = document.getElementById('mainStatus').value === 'active' ? 'block' : 'none'; }
+
+        function addSupplyRow(data = null) {
+            const container = document.getElementById('supplyRowsContainer');
+            const row = document.createElement('div');
+            row.className = 'supply-row-input';
+            row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 60px 1fr 40px; gap:8px; margin-bottom:10px; align-items:end;';
+            row.innerHTML = `
+                <div><select class="form-select supply-tech">${TECHS.map(t => `<option value="${t}" ${data?.tech === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+                <div><select class="form-select supply-brand">${BRANDS.map(b => `<option value="${b}" ${data?.brand === b ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
+                <div><input type="number" class="form-input supply-units" value="${data ? data.units : 1}"></div>
+                <div><select class="form-select supply-status">${STATUSES.map(s => `<option value="${s.toLowerCase().replace(/ /g, '_')}" ${data?.status === s.toLowerCase().replace(/ /g, '_') ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+                <button class="btn btn-danger" onclick="this.parentElement.remove()" style="font-size:18px;">🗑️</button>
+            `;
+            container.appendChild(row);
+        }
+
+        async function saveProject() {
+            const rows = document.querySelectorAll('.supply-row-input');
+            const scope = Array.from(rows).map(row => ({
+                tech: row.querySelector('.supply-tech').value,
+                brand: row.querySelector('.supply-brand').value,
+                units: row.querySelector('.supply-units').value,
+                status: row.querySelector('.supply-status').value
+            })).filter(i => i.tech !== "");
+
+            const data = {
+                nome: document.getElementById('projectName').value,
+                cliente: document.getElementById('projectClient').value || 'General',
+                mainStatus: document.getElementById('mainStatus').value,
+                category: document.getElementById('projectCategory').value,
+                priorita: document.getElementById('projectPriority').value,
+                ritardoGiorni: parseInt(document.getElementById('projectDelay').value) || 0,
+                statoQualita: document.getElementById('projectQuality').value,
+                rischiAlti: parseInt(document.getElementById('projectRisks').value) || 0,
+                azioneRichiesta: document.getElementById('projectAction').value,
+                supplyScope: scope,
+                milestones: editingId ? (projects.find(p => p.id === editingId)?.milestones || new Array(WORKFLOW_STEPS.length).fill(false)) : new Array(WORKFLOW_STEPS.length).fill(false),
+                stepDurations: editingId ? (projects.find(p => p.id === editingId)?.stepDurations || null) : null,
+                dueDate: document.getElementById('projectDueDate').value || null,
+                org_id: currentOrgId
+            };
+
+            const btn = document.getElementById('saveBtn');
+            btn.textContent = "Saving..."; btn.disabled = true;
+
+            const trySave = async (payload) => {
+                if (editingId) {
+                    const { error } = await db.from('projects').update(payload).eq('id', editingId);
+                    return error;
+                } else {
+                    const { error } = await db.from('projects').insert([payload]);
+                    return error;
+                }
+            };
+            try {
+                let err = await trySave(data);
+                if (err && err.message && err.message.includes('stepDurations')) {
+                    const { stepDurations, ...dataWithout } = data;
+                    err = await trySave(dataWithout);
+                }
+                if (err) throw err;
+                toast(editingId ? 'Project updated successfully' : 'Project created successfully');
+                closeModal();
+                fetchProjects();
+            } catch (err) {
+                console.error("Save error:", err);
+                toast('Save failed: ' + err.message, 'error');
+            } finally {
+                btn.textContent = "Save Project"; btn.disabled = false;
+            }
+        }
+
+        async function toggleStep(projectId, index) {
+            const p = projects.find(proj => proj.id === projectId);
+            if (!p.milestones) p.milestones = new Array(WORKFLOW_STEPS.length).fill(false);
+            p.milestones[index] = !p.milestones[index];
+            renderProjects();
+            updateSummary();
+            const { error } = await db.from('projects').update({ milestones: p.milestones }).eq('id', projectId);
+            if (error) toast('Failed to save step', 'error');
+        }
+
+        function centerActiveStep(projectId, index) {
+            const carousel = document.getElementById(`carousel-${projectId}`);
+            const step = document.getElementById(`step-${projectId}-${index}`);
+            if (carousel && step) {
+                carousel.scrollTo({ top: step.offsetTop - carousel.offsetTop - (carousel.clientHeight / 2) + (step.clientHeight / 2), behavior: 'smooth' });
+            }
+        }
+
+        function getMetricColor(type, value, priority) {
+            if (type === 'tempo') { const tol = priority === 'high' ? 3 : priority === 'medium' ? 7 : 10; return value === 0 ? 'bar-green' : value <= tol ? 'bar-yellow' : 'bar-red'; }
+            if (type === 'qualita') return value === 'green' ? 'bar-green' : value === 'yellow' ? 'bar-yellow' : 'bar-red';
+            if (type === 'rischio') return value === 0 ? 'bar-green' : value === 1 ? 'bar-yellow' : 'bar-red';
+        }
+
+        function getHealth(p) {
+            // If all steps done → project is complete
+            const milestones = p.milestones || [];
+            const allDone = WORKFLOW_STEPS.length > 0 && milestones.filter(m => m).length === WORKFLOW_STEPS.length;
+            if (allDone) return { text: 'Complete', level: 'healthy', dot: 'health-healthy' };
+
+            // Primary: compare Step Timeline estimated close vs due date
+            if (p.dueDate) {
+                const steps = computeCriticalPath(p);
+                const lastActive = [...steps].reverse().find(s => !s.isDone);
+                if (lastActive && lastActive.endDate) {
+                    const due = new Date(p.dueDate);
+                    due.setHours(23, 59, 59, 0);
+                    const diffDays = (lastActive.endDate - due) / 86400000;
+                    if (diffDays > 10) return { text: 'Critical', level: 'critical', dot: 'health-critical' };
+                    if (diffDays > 0) return { text: 'Attention', level: 'warning', dot: 'health-warning' };
+                    return { text: 'On Track', level: 'healthy', dot: 'health-healthy' };
+                }
+            }
+
+            // Fallback (no due date): use quality + risks only
+            const qColor = getMetricColor('qualita', p.statoQualita);
+            const rColor = getMetricColor('rischio', p.rischiAlti, p.priorita);
+            if (qColor === 'bar-red' || rColor === 'bar-red') return { text: 'Critical', level: 'critical', dot: 'health-critical' };
+            if (qColor === 'bar-yellow' || rColor === 'bar-yellow') return { text: 'Attention', level: 'warning', dot: 'health-warning' };
+            return { text: 'Healthy', level: 'healthy', dot: 'health-healthy' };
+        }
+
+        // ---- STEP TIMELINE ----
+        function computeCriticalPath(p) {
+            const steps = WORKFLOW_STEPS;
+            const done = p.milestones || new Array(steps.length).fill(false);
+            const durations = p.stepDurations || new Array(steps.length).fill(5);
+            const paddedDurations = steps.map((_, i) => Math.max(1, Math.min(260, parseInt(durations[i]) || 5)));
+            const firstUndoneIdx = done.findIndex(d => !d);
+            let cursor = new Date();
+            cursor.setHours(12, 0, 0, 0);
+            while (cursor.getDay() === 0 || cursor.getDay() === 6) cursor.setDate(cursor.getDate() + 1);
+            return steps.map((name, i) => {
+                const isDone = done[i];
+                const dur = paddedDurations[i];
+                const isActive = i === firstUndoneIdx;
+                if (isDone) return { name, isDone: true, isActive: false, dur, startWk: null, startYr: null, endWk: null, endYr: null };
+                const startDate = new Date(cursor);
+                const endDate = addWorkingDays(startDate, dur - 1);
+                const [startYr, startWk] = isoWeek(startDate);
+                const [endYr, endWk] = isoWeek(endDate);
+                cursor = addWorkingDays(endDate, 1);
+                return { name, isDone: false, isActive, dur, startWk, startYr, endWk, endYr, endDate };
+            });
+        }
+
+        function renderCriticalPath(projectId) {
+            const panel = document.getElementById('cp-' + projectId);
+            if (!panel) return;
+            const p = projects.find(pr => pr.id === projectId);
+            if (!p) return;
+            const steps = computeCriticalPath(p);
+            const lastActive = [...steps].reverse().find(s => !s.isDone);
+            const thisYear = new Date().getFullYear();
+            const estClose = lastActive
+                ? (lastActive.endYr === thisYear ? `W${lastActive.endWk}` : `W${lastActive.endWk} ${lastActive.endYr}`)
+                : 'Done';
+            const isOverdue = lastActive && lastActive.endDate && lastActive.endDate < new Date();
+            panel.innerHTML = `
+                <div class="cp-header">
+                    <span>Step Timeline</span>
+                    <span class="cp-close-est${isOverdue ? ' cp-overdue' : ''}">Est. close: <strong>${estClose}</strong></span>
+                </div>
+                <div class="cp-steps">
+                    ${steps.map((s, i) => `
+                        <div class="cp-step${s.isDone ? ' cp-done' : s.isActive ? ' cp-active' : ''}">
+                            <span class="cp-check">${s.isDone ? '✓' : s.isActive ? '▶' : '○'}</span>
+                            <span class="cp-name">${s.name}</span>
+                            <span class="cp-range">${s.isDone ? 'done' : `${s.startYr === thisYear ? `W${s.startWk}` : `W${s.startWk} ${s.startYr}`}–${s.endYr === thisYear ? `W${s.endWk}` : `W${s.endWk} ${s.endYr}`}`}</span>
+                            <input class="cp-dur" type="number" min="1" max="260" value="${s.dur}"
+                                onchange="updateStepDuration(${projectId}, ${i}, this.value)" title="Working days">
+                            <span class="cp-unit">d</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function toggleCriticalPath(projectId) {
+            const panel = document.getElementById('cp-' + projectId);
+            if (!panel) return;
+            const isOpen = panel.classList.contains('cp-open');
+            if (isOpen) {
+                panel.classList.remove('cp-open');
+                openTimelinePanels.delete(projectId);
+            } else {
+                panel.classList.add('cp-open');
+                openTimelinePanels.add(projectId);
+                renderCriticalPath(projectId);
+            }
+        }
+
+        async function updateStepDuration(projectId, stepIdx, rawValue) {
+            const p = projects.find(pr => pr.id === projectId);
+            if (!p) return;
+            if (!p.stepDurations) p.stepDurations = new Array(WORKFLOW_STEPS.length).fill(5);
+            while (p.stepDurations.length < WORKFLOW_STEPS.length) p.stepDurations.push(5);
+            p.stepDurations[stepIdx] = Math.max(1, Math.min(260, parseInt(rawValue) || 5));
+            renderCriticalPath(projectId);
+            const { error } = await db.from('projects').update({ stepDurations: p.stepDurations }).eq('id', projectId);
+            if (error) toast('Failed to save duration', 'error');
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projectsContainer');
+            container.innerHTML = '';
+
+            if (projects.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📂</div><h3>No projects yet</h3><p>Click "New Project" to create your first project and start tracking.</p><button class="btn btn-primary" onclick="openAddModal()">➕ Create First Project</button></div>';
+                return;
+            }
+
+            ['active', 'pipeline', 'closed'].forEach(status => {
+                const list = projects.filter(p => p.mainStatus === status);
+                if (list.length === 0) return;
+
+                const title = document.createElement('h2');
+                title.className = 'section-title';
+                title.textContent = STATUS_LABELS[status] || status;
+                container.appendChild(title);
+
+                const clients = [...new Set(list.map(p => p.cliente))].sort();
+                clients.forEach(client => {
+                    const ct = document.createElement('h3');
+                    ct.className = 'client-title';
+                    ct.textContent = client;
+                    container.appendChild(ct);
+
+                    list.filter(p => p.cliente === client).forEach(p => {
+                        const health = getHealth(p);
+                        const milestones = p.milestones || new Array(WORKFLOW_STEPS.length).fill(false);
+                        const firstUnchecked = milestones.findIndex(m => m === false);
+                        const activeIdx = firstUnchecked === -1 ? WORKFLOW_STEPS.length - 1 : firstUnchecked;
+                        const progPerc = WORKFLOW_STEPS.length > 0 ? Math.round((milestones.filter(m => m).length / WORKFLOW_STEPS.length) * 100) : 0;
+
+                        const priorityClass = p.priorita === 'high' ? 'badge-high' : p.priorita === 'medium' ? 'badge-medium' : 'badge-low';
+
+                        const card = document.createElement('div');
+                        card.className = 'project-card';
+                        card.innerHTML = `
+                            <div class="project-header">
+                                <h2 class="project-title">
+                                    ${p.nome}
+                                    <span class="badge ${priorityClass}">${p.priorita}</span>
+                                    ${p.category ? `<span class="badge badge-${p.category}">${p.category.replace('_', ' ')}</span>` : ''}
+                                </h2>
+                                <div>
+                                    <button class="btn btn-ghost" onclick="editProject(${p.id})" title="Edit">✏️</button>
+                                    <button class="btn btn-danger" onclick="deleteProject(${p.id})" title="Delete">🗑️</button>
+                                </div>
+                            </div>
+                            <p style="font-size:13px; margin-bottom:14px; color:var(--text-secondary);">
+                                <span class="health-dot ${health.dot}"></span> ${health.text}
+                            </p>
+                            <div class="project-body">
+                                <div class="project-main-info">
+                                    ${p.azioneRichiesta ? `<div class="action-box"><strong>⚠️ Action:</strong> ${p.azioneRichiesta}</div>` : ''}
+                                    <div class="metrics-grid">
+                                        <div class="metric-card"><div class="metric-bar ${getMetricColor('tempo', p.ritardoGiorni, p.priorita)}"></div><small>Time: <b>${p.ritardoGiorni} days</b></small></div>
+                                        <div class="metric-card"><div class="metric-bar ${getMetricColor('qualita', p.statoQualita)}"></div><small>Quality: <b>${p.statoQualita}</b></small></div>
+                                        <div class="metric-card"><div class="metric-bar ${getMetricColor('rischio', p.rischiAlti, p.priorita)}"></div><small>Risks: <b>${p.rischiAlti}</b></small></div>
+                                        <div class="metric-card"><div class="metric-bar bar-green"></div><small>Workflow: <b>${progPerc}%</b></small></div>
+                                    </div>
+                                </div>
+                                <div class="aside-panel">
+                                    <div class="aside-title">Supply</div>
+                                    ${p.supplyScope && p.supplyScope.length > 0 ? p.supplyScope.map(s => `
+                                        <div style="font-size:12px; margin-bottom:10px; border-bottom:1px dashed var(--border); padding-bottom:5px;">
+                                            <strong>${s.tech}</strong> (${s.brand})<br>Qty: ${s.units}<br>
+                                            <span class="supply-badge status-${s.status.toLowerCase().replace(/ /g, '_')}">${s.status.replace(/_/g, ' ')}</span>
+                                        </div>
+                                    `).join('') : '<p style="font-size:11px; color:var(--text-muted);">No components.</p>'}
+                                </div>
+                                <div class="aside-panel" style="overflow:hidden;">
+                                    <div class="aside-title">Workflow <span>${progPerc}%</span> <button class="btn-cp-toggle" onclick="toggleCriticalPath(${p.id})" title="Step Timeline">📅</button></div>
+                                    <div class="workflow-carousel" id="carousel-${p.id}">
+                                        ${WORKFLOW_STEPS.map((step, i) => `<div class="workflow-step ${i === activeIdx ? 'active-focus' : ''}" id="step-${p.id}-${i}"><input type="checkbox" ${milestones[i] ? 'checked' : ''} onchange="toggleStep(${p.id}, ${i})"><span>${step}</span></div>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cp-panel" id="cp-${p.id}"></div>
+                        `;
+                        container.appendChild(card);
+
+                        // Restore open Step Timeline panels
+                        if (openTimelinePanels.has(p.id)) {
+                            const cpPanel = document.getElementById('cp-' + p.id);
+                            if (cpPanel) {
+                                cpPanel.classList.add('cp-open');
+                                renderCriticalPath(p.id);
+                            }
+                        }
+
+                        requestAnimationFrame(() => setTimeout(() => centerActiveStep(p.id, activeIdx), 50));
+                    });
+                });
+            });
+        }
+
+        // ---- MODALS ----
+        function openAddModal() {
+            editingId = null;
+            populateFormDropdowns();
+            document.getElementById('projectName').value = '';
+            document.getElementById('projectClient').value = '';
+            document.getElementById('mainStatus').value = 'active';
+            document.getElementById('projectCategory').value = '';
+            document.getElementById('projectDelay').value = 0;
+            document.getElementById('projectQuality').value = 'green';
+            document.getElementById('projectRisks').value = 0;
+            document.getElementById('projectAction').value = '';
+            document.getElementById('projectDueDate').value = '';
+            document.getElementById('supplyRowsContainer').innerHTML = '';
+            document.getElementById('modalTitle').textContent = 'New Project';
+            document.getElementById('modal').classList.add('active');
+            toggleCategory();
+        }
+
+        function editProject(id) {
+            const p = projects.find(proj => proj.id === id);
+            editingId = id;
+            populateFormDropdowns();
+            document.getElementById('projectName').value = p.nome;
+            document.getElementById('projectClient').value = p.cliente;
+            document.getElementById('mainStatus').value = p.mainStatus;
+            document.getElementById('projectCategory').value = p.category || '';
+            document.getElementById('projectPriority').value = p.priorita;
+            document.getElementById('projectDelay').value = p.ritardoGiorni;
+            document.getElementById('projectQuality').value = p.statoQualita;
+            document.getElementById('projectRisks').value = p.rischiAlti;
+            document.getElementById('projectAction').value = p.azioneRichiesta;
+            document.getElementById('projectDueDate').value = p.dueDate || '';
+            document.getElementById('supplyRowsContainer').innerHTML = '';
+            if (p.supplyScope) p.supplyScope.forEach(item => addSupplyRow(item));
+            document.getElementById('modalTitle').textContent = 'Edit Project';
+            document.getElementById('modal').classList.add('active');
+            toggleCategory();
+        }
+
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        async function deleteProject(id) {
+            if (!confirm("Delete this project permanently?")) return;
+            const { error } = await db.from('projects').delete().eq('id', id);
+            if (error) toast('Delete failed', 'error');
+            else { toast('Project deleted'); fetchProjects(); }
+        }
+
+        // ---- SETTINGS MODAL ----
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+            renderSettingsUI();
+        }
+
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
+
+        function renderSettingsUI() {
+            const map = { tecnologie: TECHS, brand: BRANDS, stati_fornitura: STATUSES, workflow_steps: WORKFLOW_STEPS, categorie: CATEGORIE, priorita: PRIORITA };
+            document.getElementById('settingsContainer').innerHTML = Object.entries(map).map(([key, values]) => `
+                <div class="settings-section">
+                    <h3>${SETTINGS_LABELS[key]}</h3>
+                    <div class="settings-tag-list">${values.map((v, i) => `<span class="settings-tag">${v}<button class="remove-tag" onclick="removeSettingItem('${key}',${i})">✕</button></span>`).join('')}</div>
+                    <div class="settings-add-row">
+                        <input type="text" class="form-input" id="newItem-${key}" placeholder="Add new...">
+                        <button class="btn btn-primary" onclick="addSettingItem('${key}')">➕ Add</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getSettingsArray(key) { return ({ tecnologie: TECHS, brand: BRANDS, stati_fornitura: STATUSES, workflow_steps: WORKFLOW_STEPS, categorie: CATEGORIE, priorita: PRIORITA })[key]; }
+
+        function setSettingsArray(key, value) {
+            switch (key) { case 'tecnologie': TECHS = value; break; case 'brand': BRANDS = value; break; case 'stati_fornitura': STATUSES = value; break; case 'workflow_steps': WORKFLOW_STEPS = value; break; case 'categorie': CATEGORIE = value; break; case 'priorita': PRIORITA = value; break; }
+        }
+
+        async function saveSettingToCloud(key) {
+            const { error } = await db.from('Settings').update({ value: getSettingsArray(key) }).eq('key', key).eq('org_id', currentOrgId);
+            if (error) toast('Failed to save setting', 'error');
+        }
+
+        async function addSettingItem(key) {
+            const input = document.getElementById(`newItem-${key}`);
+            const val = input.value.trim();
+            if (!val) return;
+            const arr = getSettingsArray(key);
+            if (arr.includes(val)) { toast('This value already exists', 'info'); return; }
+            arr.push(val);
+            setSettingsArray(key, arr);
+            await saveSettingToCloud(key);
+            renderSettingsUI();
+            populateFormDropdowns();
+            toast('Added successfully');
+        }
+
+        async function removeSettingItem(key, index) {
+            const arr = getSettingsArray(key);
+            if (!confirm(`Remove "${arr[index]}"?`)) return;
+            arr.splice(index, 1);
+            setSettingsArray(key, arr);
+            await saveSettingToCloud(key);
+            renderSettingsUI();
+            populateFormDropdowns();
+            toast('Removed successfully');
+        }
+
+        // ---- START ----
+        init();
+    </script>
+</body>
+
+</html>
