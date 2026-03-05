@@ -17,9 +17,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
 
 const PLAN_MAP: Record<string, string> = {
-  // Fill these in after creating products in Stripe
-  // 'price_xxx': 'pro',
-  // 'price_yyy': 'studio',
+  'price_1T7f8CFAY0SgGV6JuTDa4ZZl': 'pro',
+  'price_1T7f8RFAY0SgGV6JzfQSGvaP': 'studio',
 };
 
 const SEATS_MAP: Record<string, number> = {
