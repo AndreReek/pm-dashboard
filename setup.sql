@@ -65,6 +65,31 @@ CREATE POLICY "projects_member" ON projects FOR ALL USING (
     org_id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid())
 );
 
+-- Invitations (team invite links)
+CREATE TABLE IF NOT EXISTS invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL DEFAULT 'member',
+    invited_by UUID NOT NULL,
+    accepted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
+
+-- Only org admins can create/read invitations for their org
+CREATE POLICY "invitations_admin" ON invitations FOR ALL USING (
+    org_id IN (
+        SELECT org_id FROM org_members
+        WHERE user_id = auth.uid() AND role = 'admin'
+    )
+);
+
+-- Anyone can read their own pending invite by token (needed for join flow — anonymous select by token)
+CREATE POLICY "invitations_token_lookup" ON invitations FOR SELECT USING (true);
+
 -- Migrations: add columns to existing deployments
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS "stepDurations" JSONB;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS "dueDate" DATE;

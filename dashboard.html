@@ -194,18 +194,30 @@
     <div id="settingsModal" class="modal-overlay" onclick="handleOverlayClick(event, 'settingsModal')">
         <div class="modal-box" style="max-width:700px;">
             <div class="modal-header">
-                <h2>⚙️ Dashboard Settings</h2>
+                <h2>⚙️ Settings</h2>
                 <button class="modal-close" onclick="closeSettingsModal()" title="Close (Esc)">✕</button>
             </div>
-            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Customize fields for your organization. Changes are saved instantly.</p>
-            <div style="margin-bottom:20px; padding:14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <div>
-                    <div style="font-size:13px; font-weight:600; margin-bottom:2px;">Load a Template</div>
-                    <div style="font-size:12px; color:var(--text-secondary);">Reset all settings to a predefined industry template.</div>
-                </div>
-                <button class="btn btn-secondary" onclick="openTemplateModal()">📋 Browse Templates</button>
+            <!-- Tab bar -->
+            <div class="settings-tabs" id="settingsTabs">
+                <button class="settings-tab active" onclick="switchSettingsTab('fields')">Fields</button>
+                <button class="settings-tab" onclick="switchSettingsTab('team')">Team</button>
             </div>
-            <div id="settingsContainer"></div>
+            <!-- Fields tab -->
+            <div id="settingsTabFields">
+                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px; margin-top:16px;">Customize fields for your organization. Changes are saved instantly.</p>
+                <div style="margin-bottom:20px; padding:14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                    <div>
+                        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">Load a Template</div>
+                        <div style="font-size:12px; color:var(--text-secondary);">Reset all settings to a predefined industry template.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="openTemplateModal()">📋 Browse Templates</button>
+                </div>
+                <div id="settingsContainer"></div>
+            </div>
+            <!-- Team tab -->
+            <div id="settingsTabTeam" style="display:none;">
+                <div id="teamTabContent" style="margin-top:16px;"></div>
+            </div>
             <div style="margin-top:24px;">
                 <button class="btn btn-secondary" onclick="closeSettingsModal()" style="width:100%;">Close</button>
             </div>
@@ -376,6 +388,7 @@
         let currentOrgId = null;
         let currentUser = null;
         let currentOrgName = '';
+        let currentUserRole = 'member';
         let confirmCallback = null;
         let closedCollapsed = true;
         let filteredProjects = [];
@@ -582,6 +595,10 @@
 
             const { data: memberships, error: memErr } = await db
                 .from('org_members').select('org_id, role').eq('user_id', currentUser.id);
+
+            if (memberships && memberships.length > 0) {
+                currentUserRole = memberships[0].role || 'member';
+            }
 
             if (memErr || !memberships || memberships.length === 0) {
                 toast('Setting up your organization…', 'info');
@@ -1185,28 +1202,37 @@
         function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
 
         function renderSettingsUI() {
+            const isAdmin = currentUserRole === 'admin';
             const activeTpl = TEMPLATES.find(t => t.id === activeTemplateId);
             const map = { tecnologie: TECHS, brand: BRANDS, stati_fornitura: STATUSES, workflow_steps: WORKFLOW_STEPS, categorie: CATEGORIE, priorita: PRIORITA };
+
+            // Hide template button for non-admins
+            const tplRow = document.querySelector('#settingsTabFields > div[style*="bg-alt"]');
+            if (tplRow) tplRow.style.display = isAdmin ? '' : 'none';
+
             document.getElementById('settingsContainer').innerHTML = Object.entries(map).map(([key, values]) => {
                 const tplItems = activeTpl?.settings[key] || [];
                 const suggestions = tplItems.filter(s => !values.includes(s));
-                const suggestionsHtml = suggestions.length > 0 ? `
+                const suggestionsHtml = isAdmin && suggestions.length > 0 ? `
                     <div class="settings-suggestions">
                         <span class="suggestions-label">💡 Suggestions:</span>
                         ${suggestions.map(s => `<button class="suggestion-chip" onclick="quickAddSuggestion(this)" data-key="${esc(key)}" data-val="${esc(s)}">${esc(s)}</button>`).join('')}
                     </div>` : '';
+                const tagsHtml = values.map((v, i) =>
+                    `<span class="settings-tag">${esc(v)}${isAdmin ? `<button class="remove-tag" onclick="removeSettingItem('${key}',${i})">✕</button>` : ''}</span>`
+                ).join('');
+                const addRowHtml = isAdmin ? `
+                    <div class="settings-add-row">
+                        <input type="text" class="form-input" id="newItem-${key}" placeholder="Add new…"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();addSettingItem('${key}')}">
+                        <button class="btn btn-primary" onclick="addSettingItem('${key}')">➕ Add</button>
+                    </div>` : '';
                 return `
                     <div class="settings-section">
                         <h3>${SETTINGS_LABELS[key]}</h3>
-                        <div class="settings-tag-list">${values.map((v, i) =>
-                            `<span class="settings-tag">${esc(v)}<button class="remove-tag" onclick="removeSettingItem('${key}',${i})">✕</button></span>`
-                        ).join('')}</div>
+                        <div class="settings-tag-list">${tagsHtml}</div>
                         ${suggestionsHtml}
-                        <div class="settings-add-row">
-                            <input type="text" class="form-input" id="newItem-${key}" placeholder="Add new…"
-                                onkeydown="if(event.key==='Enter'){event.preventDefault();addSettingItem('${key}')}">
-                            <button class="btn btn-primary" onclick="addSettingItem('${key}')">➕ Add</button>
-                        </div>
+                        ${addRowHtml}
                     </div>`;
             }).join('');
         }
@@ -1251,6 +1277,7 @@
         }
 
         async function addSettingItem(key) {
+            if (currentUserRole !== 'admin') { toast('Only admins can modify settings.', 'error'); return; }
             const input = document.getElementById(`newItem-${key}`);
             const val = input.value.trim();
             if (!val) return;
@@ -1272,6 +1299,7 @@
         }
 
         async function removeSettingItem(key, index) {
+            if (currentUserRole !== 'admin') { toast('Only admins can modify settings.', 'error'); return; }
             const arr = getSettingsArray(key);
             const itemVal = arr[index];
             showConfirm('🗑️', 'Remove Item?', `Remove "${itemVal}" from the list?`, 'Remove', async () => {
@@ -1284,6 +1312,141 @@
                 renderSettingsUI();
                 populateFormDropdowns();
                 if (ok) toast('Removed');
+            });
+        }
+
+        // ---- SETTINGS TABS ----
+        function switchSettingsTab(tab) {
+            document.getElementById('settingsTabFields').style.display = tab === 'fields' ? '' : 'none';
+            document.getElementById('settingsTabTeam').style.display = tab === 'team' ? '' : 'none';
+            document.querySelectorAll('.settings-tab').forEach((btn, i) => {
+                btn.classList.toggle('active', (tab === 'fields' && i === 0) || (tab === 'team' && i === 1));
+            });
+            if (tab === 'team') renderTeamTab();
+        }
+
+        // ---- TEAM MANAGEMENT ----
+        async function renderTeamTab() {
+            const container = document.getElementById('teamTabContent');
+            container.innerHTML = '<p style="font-size:13px; color:var(--text-secondary);">Loading team…</p>';
+
+            // Fetch members
+            const { data: members, error } = await db
+                .from('org_members')
+                .select('user_id, role, created_at')
+                .eq('org_id', currentOrgId);
+
+            if (error) {
+                container.innerHTML = '<p style="color:var(--red);">Failed to load team members.</p>';
+                return;
+            }
+
+            // Fetch pending invitations
+            const { data: invites } = await db
+                .from('invitations')
+                .select('id, email, role, created_at')
+                .eq('org_id', currentOrgId)
+                .is('accepted_at', null);
+
+            const isAdmin = currentUserRole === 'admin';
+
+            const membersHtml = members.map(m => {
+                const isMe = m.user_id === currentUser.id;
+                const roleLabel = m.role === 'admin' ? '<span class="badge badge-high" style="font-size:10px;">Admin</span>' : '<span class="badge badge-medium" style="font-size:10px;">Member</span>';
+                return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">${esc(m.user_id.charAt(0).toUpperCase())}</div>
+                        <div>
+                            <div style="font-size:13px; font-weight:600;">${esc(m.user_id)}${isMe ? ' <span style="font-size:11px; color:var(--text-secondary);">(you)</span>' : ''}</div>
+                            <div style="font-size:11px; color:var(--text-secondary);">Joined ${new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${roleLabel}
+                        ${isAdmin && !isMe ? `<button class="btn btn-danger" style="font-size:11px; padding:4px 10px;" onclick="removeTeamMember('${esc(m.user_id)}')">Remove</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+
+            const pendingHtml = (invites && invites.length > 0) ? `
+                <div style="margin-top:16px;">
+                    <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">Pending Invites</div>
+                    ${invites.map(inv => `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
+                            <div style="font-size:13px; color:var(--text-secondary);">${esc(inv.email)}</div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button class="btn btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="copyInviteLink('${esc(inv.id)}')">Copy link</button>
+                                ${isAdmin ? `<button class="btn btn-danger" style="font-size:11px; padding:4px 10px;" onclick="cancelInvite('${esc(inv.id)}')">Cancel</button>` : ''}
+                            </div>
+                        </div>`).join('')}
+                </div>` : '';
+
+            const inviteFormHtml = isAdmin ? `
+                <div style="margin-top:20px; padding:14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg);">
+                    <div style="font-size:13px; font-weight:600; margin-bottom:10px;">Invite a teammate</div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="email" id="inviteEmail" class="form-input" placeholder="colleague@company.com" style="flex:1;">
+                        <select id="inviteRole" class="form-select" style="width:110px;">
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="inviteTeamMember()">Invite</button>
+                    </div>
+                    <p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">An invite link will be generated. Share it with your teammate.</p>
+                </div>` : '<p style="font-size:12px; color:var(--text-secondary); margin-top:16px;">Only admins can invite team members.</p>';
+
+            container.innerHTML = `
+                <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">Members (${members.length})</div>
+                ${membersHtml}
+                ${pendingHtml}
+                ${inviteFormHtml}
+            `;
+        }
+
+        async function inviteTeamMember() {
+            const email = document.getElementById('inviteEmail').value.trim().toLowerCase();
+            const role = document.getElementById('inviteRole').value;
+            if (!email) { toast('Enter an email address.', 'error'); return; }
+
+            const token = crypto.randomUUID();
+            const { data, error } = await db.from('invitations').insert([{
+                org_id: currentOrgId,
+                email,
+                token,
+                role,
+                invited_by: currentUser.id
+            }]).select().single();
+
+            if (error) {
+                toast('Failed to create invite: ' + error.message, 'error');
+                return;
+            }
+
+            const link = `${window.location.origin}/join.html?token=${token}`;
+            await navigator.clipboard.writeText(link).catch(() => {});
+            toast('Invite link copied to clipboard!');
+            renderTeamTab();
+        }
+
+        async function copyInviteLink(inviteId) {
+            const { data, error } = await db.from('invitations').select('token').eq('id', inviteId).single();
+            if (error || !data) { toast('Could not retrieve link.', 'error'); return; }
+            const link = `${window.location.origin}/join.html?token=${data.token}`;
+            await navigator.clipboard.writeText(link).catch(() => {});
+            toast('Invite link copied!');
+        }
+
+        async function cancelInvite(inviteId) {
+            const { error } = await db.from('invitations').delete().eq('id', inviteId);
+            if (error) toast('Failed to cancel invite.', 'error');
+            else { toast('Invite cancelled'); renderTeamTab(); }
+        }
+
+        async function removeTeamMember(userId) {
+            showConfirm('👤', 'Remove Member?', 'This person will lose access to the organization.', 'Remove', async () => {
+                const { error } = await db.from('org_members').delete().eq('org_id', currentOrgId).eq('user_id', userId);
+                if (error) toast('Failed to remove member.', 'error');
+                else { toast('Member removed'); renderTeamTab(); }
             });
         }
 

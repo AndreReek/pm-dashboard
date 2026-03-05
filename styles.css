@@ -922,6 +922,31 @@ body {
     padding: 4px;
 }
 
+/* ---- SETTINGS TABS ---- */
+.settings-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0;
+    gap: 0;
+}
+.settings-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+}
+.settings-tab:hover { color: var(--text); }
+.settings-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
 /* Sidebar backdrop for mobile */
 .sidebar-backdrop {
     display: none;
