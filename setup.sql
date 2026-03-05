@@ -90,6 +90,30 @@ CREATE POLICY "invitations_admin" ON invitations FOR ALL USING (
 -- Anyone can read their own pending invite by token (needed for join flow — anonymous select by token)
 CREATE POLICY "invitations_token_lookup" ON invitations FOR SELECT USING (true);
 
+-- Subscriptions (Stripe billing state per org)
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id BIGSERIAL PRIMARY KEY,
+    org_id BIGINT NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    plan TEXT NOT NULL DEFAULT 'free',   -- 'free' | 'pro' | 'studio'
+    status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'past_due' | 'canceled'
+    seats INT NOT NULL DEFAULT 1,
+    current_period_end TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- Org members can read their own org subscription
+CREATE POLICY "subscriptions_member_read" ON subscriptions FOR SELECT USING (
+    org_id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid())
+);
+
+-- Only service role (Edge Functions) can write subscriptions — no client-side writes
+-- (INSERT/UPDATE/DELETE policies intentionally omitted; use service_role key in Edge Functions)
+
 -- Migrations: add columns to existing deployments
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS "stepDurations" JSONB;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS "dueDate" DATE;

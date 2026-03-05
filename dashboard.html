@@ -45,6 +45,25 @@
                     </div>
                 </div>
             </div>
+            <!-- Plan badge + upgrade CTA in sidebar -->
+            <div id="planBadgeArea" style="padding:10px 16px;">
+                <div id="planBadgeFree" style="display:none;">
+                    <div style="background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg); padding:10px 12px;">
+                        <div style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Free Plan</div>
+                        <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px;" id="freeUsageLabel">0 / 10 projects</div>
+                        <button class="btn btn-primary" style="width:100%; font-size:12px; justify-content:center;" onclick="openUpgradeModal()">Upgrade to Pro</button>
+                    </div>
+                </div>
+                <div id="planBadgePaid" style="display:none;">
+                    <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:var(--radius-lg); padding:10px 12px; display:flex; align-items:center; justify-content:space-between;">
+                        <div>
+                            <div style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em;" id="paidPlanLabel">Pro</div>
+                            <div style="font-size:11px; color:var(--primary);" id="paidSeatsLabel">5 seats</div>
+                        </div>
+                        <button class="btn btn-ghost" style="font-size:11px; padding:4px 8px;" onclick="openBillingPortal()">Manage</button>
+                    </div>
+                </div>
+            </div>
             <div style="padding: 8px 16px; font-size: 11px; text-align: center;">
                 <a href="legal.html" style="color: var(--text-muted); text-decoration: none;">Privacy &amp; Terms</a>
             </div>
@@ -239,6 +258,45 @@
         </div>
     </div>
 
+    <!-- UPGRADE MODAL -->
+    <div id="upgradeModal" class="modal-overlay" onclick="handleOverlayClick(event, 'upgradeModal')" onkeydown="if(event.key==='Escape')closeUpgradeModal()">
+        <div class="modal-box" style="max-width:560px;">
+            <div class="modal-header">
+                <h2>Upgrade Your Plan</h2>
+                <button class="modal-close" onclick="closeUpgradeModal()">✕</button>
+            </div>
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">Unlock team collaboration and unlimited projects.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+                <!-- Pro -->
+                <div style="border:2px solid var(--primary); border-radius:var(--radius-lg); padding:20px; position:relative;">
+                    <div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:11px; font-weight:700; padding:2px 10px; border-radius:20px;">POPULAR</div>
+                    <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Pro</div>
+                    <div style="font-size:28px; font-weight:800; color:var(--primary); margin-bottom:4px;">$19<span style="font-size:14px; font-weight:400; color:var(--text-secondary);">/month</span></div>
+                    <ul style="font-size:12px; color:var(--text-secondary); padding-left:16px; margin:12px 0; line-height:1.8;">
+                        <li>Up to <b>5 seats</b></li>
+                        <li>Unlimited projects</li>
+                        <li>Team invitations</li>
+                        <li>All workflow templates</li>
+                    </ul>
+                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="startCheckout('pro')">Upgrade to Pro</button>
+                </div>
+                <!-- Studio -->
+                <div style="border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px;">
+                    <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Studio</div>
+                    <div style="font-size:28px; font-weight:800; margin-bottom:4px;">$49<span style="font-size:14px; font-weight:400; color:var(--text-secondary);">/month</span></div>
+                    <ul style="font-size:12px; color:var(--text-secondary); padding-left:16px; margin:12px 0; line-height:1.8;">
+                        <li><b>Unlimited seats</b></li>
+                        <li>Unlimited projects</li>
+                        <li>Priority support</li>
+                        <li>All Pro features</li>
+                    </ul>
+                    <button class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="startCheckout('studio')">Upgrade to Studio</button>
+                </div>
+            </div>
+            <p style="font-size:11px; color:var(--text-muted); text-align:center;">Cancel anytime. Billed monthly. Secure payment via Stripe.</p>
+        </div>
+    </div>
+
     <!-- CUSTOM CONFIRM MODAL -->
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-box" style="max-width:420px; text-align:center;">
@@ -389,6 +447,8 @@
         let currentUser = null;
         let currentOrgName = '';
         let currentUserRole = 'member';
+        let currentPlan = 'free';   // 'free' | 'pro' | 'studio'
+        let currentSeats = 1;
         let confirmCallback = null;
         let closedCollapsed = true;
         let filteredProjects = [];
@@ -629,12 +689,120 @@
             await loadSettings();
             populateFormDropdowns();
             populateFilterPriority();
-            await fetchProjects();
+            await Promise.all([fetchProjects(), loadSubscription()]);
+
+            // Handle Stripe redirect back from checkout
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('upgrade') === 'success') {
+                toast('Plan upgraded! Welcome to the team tier.', 'success');
+                history.replaceState({}, '', 'dashboard.html');
+            } else if (urlParams.get('upgrade') === 'cancel') {
+                toast('Upgrade cancelled — you remain on the Free plan.', 'info');
+                history.replaceState({}, '', 'dashboard.html');
+            }
         }
 
         async function handleLogout() {
             await db.auth.signOut();
             window.location.href = 'login.html';
+        }
+
+        // ---- BILLING ----
+        async function loadSubscription() {
+            if (!currentOrgId) return;
+            try {
+                const { data } = await db
+                    .from('subscriptions')
+                    .select('plan, seats, status')
+                    .eq('org_id', currentOrgId)
+                    .single();
+
+                if (data && data.status !== 'canceled') {
+                    currentPlan = data.plan || 'free';
+                    currentSeats = data.seats || 1;
+                } else {
+                    currentPlan = 'free';
+                    currentSeats = 1;
+                }
+            } catch (_) {
+                currentPlan = 'free';
+                currentSeats = 1;
+            }
+            updatePlanBadge();
+        }
+
+        function updatePlanBadge() {
+            const freeBadge = document.getElementById('planBadgeFree');
+            const paidBadge = document.getElementById('planBadgePaid');
+            if (currentPlan === 'free') {
+                freeBadge.style.display = '';
+                paidBadge.style.display = 'none';
+                document.getElementById('freeUsageLabel').textContent = `${projects.length} / 10 projects`;
+            } else {
+                freeBadge.style.display = 'none';
+                paidBadge.style.display = '';
+                document.getElementById('paidPlanLabel').textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+                document.getElementById('paidSeatsLabel').textContent = currentPlan === 'studio' ? 'Unlimited seats' : `Up to ${currentSeats} seats`;
+            }
+        }
+
+        function openUpgradeModal() {
+            document.getElementById('upgradeModal').classList.add('active');
+        }
+
+        function closeUpgradeModal() {
+            document.getElementById('upgradeModal').classList.remove('active');
+        }
+
+        async function startCheckout(plan) {
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) { toast('Please sign in first.', 'error'); return; }
+
+            const btn = document.querySelector(`#upgradeModal button[onclick="startCheckout('${plan}')"]`);
+            if (btn) { btn.textContent = 'Redirecting…'; btn.disabled = true; }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'apikey': SUPABASE_KEY,
+                    },
+                    body: JSON.stringify({ plan }),
+                });
+                const json = await res.json();
+                if (json.error) throw new Error(json.error);
+                window.location.href = json.url;
+            } catch (err) {
+                toast('Checkout failed: ' + err.message, 'error');
+                if (btn) { btn.textContent = plan === 'pro' ? 'Upgrade to Pro' : 'Upgrade to Studio'; btn.disabled = false; }
+            }
+        }
+
+        async function openBillingPortal() {
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) { toast('Please sign in first.', 'error'); return; }
+
+            const btn = document.querySelector('#planBadgePaid button');
+            if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/billing-portal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'apikey': SUPABASE_KEY,
+                    },
+                });
+                const json = await res.json();
+                if (json.error) throw new Error(json.error);
+                window.location.href = json.url;
+            } catch (err) {
+                toast('Could not open billing portal: ' + err.message, 'error');
+                if (btn) { btn.textContent = 'Manage'; btn.disabled = false; }
+            }
         }
 
         // ---- SETTINGS ----
@@ -692,6 +860,7 @@
                 }));
                 updateSummary();
                 applyFilters();
+                updatePlanBadge();
             } catch (err) {
                 const msg = err?.message?.includes('JWT') || err?.message?.includes('auth')
                     ? 'Session expired. Please reload and log in again.'
@@ -1118,6 +1287,11 @@
 
         // ---- MODALS ----
         function openAddModal() {
+            if (currentPlan === 'free' && projects.length >= 10) {
+                openUpgradeModal();
+                toast('Free plan limit reached (10 projects). Upgrade to add more.', 'error');
+                return;
+            }
             editingId = null;
             populateFormDropdowns();
             document.getElementById('projectName').value = '';

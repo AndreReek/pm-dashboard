@@ -169,6 +169,50 @@
         .lp-step-body h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 4px 0 6px; }
         .lp-step-body p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 
+        /* Pricing */
+        .lp-pricing {
+            padding: 80px 32px;
+            max-width: 1040px; margin: 0 auto;
+        }
+        .lp-pricing-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+            margin-top: 48px;
+        }
+        .lp-plan {
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 32px; background: var(--bg-secondary);
+            display: flex; flex-direction: column;
+        }
+        .lp-plan.popular {
+            border-color: var(--primary); border-width: 2px;
+            position: relative;
+        }
+        .lp-plan-badge {
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: #fff;
+            font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; padding: 3px 12px; border-radius: 20px;
+        }
+        .lp-plan-name { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
+        .lp-plan-price { font-size: 36px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+        .lp-plan-price span { font-size: 15px; font-weight: 400; color: var(--text-muted); }
+        .lp-plan-desc { font-size: 13px; color: var(--text-secondary); margin: 10px 0 20px; }
+        .lp-plan-features { list-style: none; padding: 0; margin: 0 0 24px; flex: 1; }
+        .lp-plan-features li { font-size: 13px; color: var(--text-secondary); padding: 5px 0; display: flex; gap: 8px; }
+        .lp-plan-features li::before { content: "✓"; color: var(--primary); font-weight: 700; }
+        .lp-plan-cta {
+            display: block; text-align: center; padding: 11px 16px;
+            border-radius: var(--radius); font-size: 14px; font-weight: 700;
+            text-decoration: none; cursor: pointer;
+        }
+        .lp-plan-cta.primary { background: var(--primary); color: #fff; }
+        .lp-plan-cta.primary:hover { opacity: 0.88; }
+        .lp-plan-cta.secondary { border: 1.5px solid var(--border); color: var(--text-primary); }
+        .lp-plan-cta.secondary:hover { border-color: var(--primary); color: var(--primary); }
+        @media (max-width: 768px) {
+            .lp-pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+        }
+
         /* CTA banner */
         .lp-cta-banner {
             padding: 96px 32px; text-align: center;
@@ -203,6 +247,7 @@
     <nav class="lp-nav">
         <a href="/" class="lp-nav-brand">📊 PM Dashboard</a>
         <div class="lp-nav-actions">
+            <a href="#pricing" style="font-size:14px; color:var(--text-secondary); text-decoration:none; padding: 8px 12px;">Pricing</a>
             <a href="login.html" class="lp-cta-secondary" style="padding: 8px 18px; font-size:14px;">Sign in</a>
             <a href="login.html#register" class="lp-cta-primary" style="padding: 8px 18px; font-size:14px;">Get started free</a>
         </div>
@@ -345,6 +390,57 @@
                         <h3>Track and update as you go</h3>
                         <p>Check off workflow steps as they complete. Update supply statuses. Adjust step durations when timelines shift. The health score recalculates instantly — no manual RAG updates.</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing">
+        <div class="lp-pricing">
+            <p class="lp-section-label">Pricing</p>
+            <h2 class="lp-section-title">Start free. Scale when you need to.</h2>
+            <div class="lp-pricing-grid">
+                <!-- Free -->
+                <div class="lp-plan">
+                    <div class="lp-plan-name">Free</div>
+                    <div class="lp-plan-price">$0<span> / month</span></div>
+                    <p class="lp-plan-desc">For solo PMs getting started</p>
+                    <ul class="lp-plan-features">
+                        <li>1 user</li>
+                        <li>Up to 10 projects</li>
+                        <li>All workflow templates</li>
+                        <li>CSV export</li>
+                    </ul>
+                    <a href="login.html#register" class="lp-plan-cta secondary">Get started free</a>
+                </div>
+                <!-- Pro -->
+                <div class="lp-plan popular">
+                    <div class="lp-plan-badge">Most popular</div>
+                    <div class="lp-plan-name">Pro</div>
+                    <div class="lp-plan-price">$19<span> / month</span></div>
+                    <p class="lp-plan-desc">For small teams and agencies</p>
+                    <ul class="lp-plan-features">
+                        <li>Up to 5 seats</li>
+                        <li>Unlimited projects</li>
+                        <li>Team invitations</li>
+                        <li>Role-based permissions</li>
+                        <li>All workflow templates</li>
+                    </ul>
+                    <a href="login.html#register" class="lp-plan-cta primary">Start with Pro</a>
+                </div>
+                <!-- Studio -->
+                <div class="lp-plan">
+                    <div class="lp-plan-name">Studio</div>
+                    <div class="lp-plan-price">$49<span> / month</span></div>
+                    <p class="lp-plan-desc">For larger teams and studios</p>
+                    <ul class="lp-plan-features">
+                        <li>Unlimited seats</li>
+                        <li>Unlimited projects</li>
+                        <li>Priority support</li>
+                        <li>All Pro features</li>
+                    </ul>
+                    <a href="login.html#register" class="lp-plan-cta secondary">Start with Studio</a>
                 </div>
             </div>
         </div>
