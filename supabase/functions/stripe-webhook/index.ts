@@ -14,7 +14,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'https://esm.sh/stripe@14?target=deno';
+import Stripe from 'npm:stripe@14';
 
 const PLAN_MAP: Record<string, string> = {
   'price_1T7f8CFAY0SgGV6JuTDa4ZZl': 'pro',
@@ -36,7 +36,7 @@ serve(async (req) => {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
   } catch (err) {
     return new Response(`Webhook signature verification failed: ${err.message}`, { status: 400 });
   }
