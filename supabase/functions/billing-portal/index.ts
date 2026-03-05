@@ -52,9 +52,25 @@ serve(async (req) => {
 
     const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:3000';
 
+    // Create an inline portal configuration so no dashboard setup is required
+    const configuration = await stripe.billingPortal.configurations.create({
+      business_profile: {
+        headline: 'Manage your PM Dashboard subscription',
+        privacy_policy_url: `${siteUrl}/legal.html`,
+        terms_of_service_url: `${siteUrl}/legal.html`,
+      },
+      features: {
+        invoice_history: { enabled: true },
+        payment_method_update: { enabled: true },
+        subscription_cancel: { enabled: true },
+        subscription_update: { enabled: false },
+      },
+    });
+
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: `${siteUrl}/dashboard.html`,
+      configuration: configuration.id,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
