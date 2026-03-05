@@ -1342,7 +1342,7 @@ kbd {
     border-radius: 12px;
     font-weight: 600;
 }
-.cp-close-est strong { color: var(--text-primary); }
+.cp-close-est strong { color: var(--text); }
 
 .cp-steps { display: flex; flex-direction: column; gap: 4px; }
 
@@ -1367,7 +1367,7 @@ kbd {
 
 .cp-step.cp-active {
     background: var(--blue-bg);
-    color: var(--text-primary);
+    color: var(--text);
     font-weight: 600;
     border-left: 3px solid var(--primary);
     padding-left: 3px;
@@ -1398,7 +1398,7 @@ kbd {
     border: 1px solid var(--border);
     border-radius: 4px;
     background: var(--card);
-    color: var(--text-primary);
+    color: var(--text);
 }
 .cp-dur:disabled { opacity: 0.4; cursor: not-allowed; }
 

@@ -570,6 +570,12 @@
 
         // ---- AUTH GUARD + INIT ----
         async function init() {
+            // If this is a password-recovery redirect, send to the dedicated page
+            if (window.location.hash.includes('type=recovery')) {
+                window.location.href = 'reset-password.html' + window.location.hash;
+                return;
+            }
+
             const { data: { session } } = await db.auth.getSession();
             if (!session) { window.location.href = 'login.html'; return; }
             currentUser = session.user;

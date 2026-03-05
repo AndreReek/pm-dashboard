@@ -116,7 +116,7 @@
             if (!email) { showError('Enter your email address first, then click "Forgot password?".'); return; }
             hideError();
             const { error } = await db.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + '/dashboard.html'
+                redirectTo: window.location.origin + '/reset-password.html'
             });
             if (error) { showError(error.message); return; }
             document.getElementById('errorBox').style.background = 'var(--green-bg)';
