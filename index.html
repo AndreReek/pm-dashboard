@@ -29,17 +29,17 @@
             position: sticky; top: 0; z-index: 100;
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 32px; height: 56px;
-            background: var(--bg-primary);
+            background: var(--bg);
             border-bottom: 1px solid var(--border);
             backdrop-filter: blur(8px);
         }
-        .lp-nav-brand { font-size: 16px; font-weight: 700; color: var(--text-primary); text-decoration: none; }
+        .lp-nav-brand { font-size: 16px; font-weight: 700; color: var(--text); text-decoration: none; }
         .lp-nav-actions { display: flex; gap: 12px; align-items: center; }
 
         .lp-hero {
             padding: 96px 32px 80px;
             text-align: center;
-            background: var(--bg-primary);
+            background: var(--bg);
             border-bottom: 1px solid var(--border);
         }
         .lp-eyebrow {
@@ -52,7 +52,7 @@
         .lp-headline {
             font-size: clamp(32px, 5vw, 54px);
             font-weight: 800; line-height: 1.15;
-            color: var(--text-primary);
+            color: var(--text);
             max-width: 760px; margin: 0 auto 20px;
         }
         .lp-headline em { font-style: normal; color: var(--primary); }
@@ -65,15 +65,15 @@
             display: inline-block; padding: 14px 32px;
             background: var(--primary); color: white;
             font-size: 16px; font-weight: 700;
-            border-radius: var(--radius); text-decoration: none;
+            border-radius: var(--radius-md); text-decoration: none;
             transition: opacity 0.15s;
         }
         .lp-cta-primary:hover { opacity: 0.88; }
         .lp-cta-secondary {
             display: inline-block; padding: 14px 28px;
-            color: var(--text-primary); font-size: 15px; font-weight: 500;
-            border: 1px solid var(--border); border-radius: var(--radius);
-            text-decoration: none; background: var(--bg-primary);
+            color: var(--text); font-size: 15px; font-weight: 500;
+            border: 1px solid var(--border); border-radius: var(--radius-md);
+            text-decoration: none; background: var(--bg);
             transition: border-color 0.15s;
         }
         .lp-cta-secondary:hover { border-color: var(--primary); }
@@ -84,30 +84,30 @@
             max-width: 900px; margin: 56px auto 0;
             border: 1px solid var(--border); border-radius: 12px;
             overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.12);
-            background: var(--bg-secondary);
+            background: var(--bg-alt);
         }
         .lp-preview-bar {
-            height: 36px; background: var(--bg-secondary);
+            height: 36px; background: var(--bg-alt);
             border-bottom: 1px solid var(--border);
             display: flex; align-items: center; padding: 0 16px; gap: 8px;
         }
         .lp-preview-dot { width: 10px; height: 10px; border-radius: 50%; }
         .lp-preview-url {
-            flex: 1; height: 20px; background: var(--bg-primary);
+            flex: 1; height: 20px; background: var(--bg);
             border-radius: 4px; margin: 0 16px;
             display: flex; align-items: center; padding: 0 10px;
             font-size: 11px; color: var(--text-muted);
         }
         .lp-preview-content { padding: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
         .lp-mock-card {
-            background: var(--bg-primary); border: 1px solid var(--border);
+            background: var(--bg); border: 1px solid var(--border);
             border-radius: 8px; padding: 14px;
         }
         .lp-mock-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
         .lp-mock-tag.green { background: var(--green-bg); color: var(--green-text); }
         .lp-mock-tag.yellow { background: var(--yellow-bg); color: var(--yellow-text); }
         .lp-mock-tag.red { background: var(--red-bg); color: var(--red-text); }
-        .lp-mock-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+        .lp-mock-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
         .lp-mock-bar { height: 4px; border-radius: 2px; margin-bottom: 4px; }
         .lp-mock-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 6px; }
         .lp-mock-step { font-size: 10px; color: var(--text-muted); padding: 3px 0; border-bottom: 1px solid var(--border); }
@@ -125,17 +125,17 @@
         }
         .lp-section-title {
             text-align: center; font-size: clamp(24px, 3vw, 36px);
-            font-weight: 800; color: var(--text-primary); margin-bottom: 56px;
+            font-weight: 800; color: var(--text); margin-bottom: 56px;
         }
         .lp-features-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
         }
         .lp-feature {
             padding: 28px; border: 1px solid var(--border);
-            border-radius: var(--radius); background: var(--bg-secondary);
+            border-radius: var(--radius-md); background: var(--bg-alt);
         }
         .lp-feature-icon { font-size: 28px; margin-bottom: 14px; display: block; }
-        .lp-feature h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 8px; }
+        .lp-feature h3 { font-size: 16px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
         .lp-feature p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
         .lp-feature-badge {
             display: inline-block; margin-top: 12px;
@@ -147,7 +147,7 @@
 
         /* How it works */
         .lp-steps {
-            background: var(--bg-secondary);
+            background: var(--bg-alt);
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
             padding: 80px 32px;
@@ -165,7 +165,7 @@
             color: white; font-size: 14px; font-weight: 800;
             display: flex; align-items: center; justify-content: center;
         }
-        .lp-step-body h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 4px 0 6px; }
+        .lp-step-body h3 { font-size: 16px; font-weight: 700; color: var(--text); margin: 4px 0 6px; }
         .lp-step-body p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 
         /* Pricing */
@@ -178,8 +178,8 @@
             margin-top: 48px;
         }
         .lp-plan {
-            border: 1px solid var(--border); border-radius: var(--radius);
-            padding: 32px; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: var(--radius-md);
+            padding: 32px; background: var(--bg-alt);
             display: flex; flex-direction: column;
         }
         .lp-plan.popular {
@@ -192,8 +192,8 @@
             font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
             text-transform: uppercase; padding: 3px 12px; border-radius: 20px;
         }
-        .lp-plan-name { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
-        .lp-plan-price { font-size: 36px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+        .lp-plan-name { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+        .lp-plan-price { font-size: 36px; font-weight: 800; color: var(--text); line-height: 1; }
         .lp-plan-price span { font-size: 15px; font-weight: 400; color: var(--text-muted); }
         .lp-plan-desc { font-size: 13px; color: var(--text-secondary); margin: 10px 0 20px; }
         .lp-plan-features { list-style: none; padding: 0; margin: 0 0 24px; flex: 1; }
@@ -201,12 +201,12 @@
         .lp-plan-features li::before { content: "✓"; color: var(--primary); font-weight: 700; }
         .lp-plan-cta {
             display: block; text-align: center; padding: 11px 16px;
-            border-radius: var(--radius); font-size: 14px; font-weight: 700;
+            border-radius: var(--radius-md); font-size: 14px; font-weight: 700;
             text-decoration: none; cursor: pointer;
         }
         .lp-plan-cta.primary { background: var(--primary); color: #fff; }
         .lp-plan-cta.primary:hover { opacity: 0.88; }
-        .lp-plan-cta.secondary { border: 1.5px solid var(--border); color: var(--text-primary); }
+        .lp-plan-cta.secondary { border: 1.5px solid var(--border); color: var(--text); }
         .lp-plan-cta.secondary:hover { border-color: var(--primary); color: var(--primary); }
         @media (max-width: 768px) {
             .lp-pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
@@ -216,7 +216,7 @@
         .lp-cta-banner {
             padding: 96px 32px; text-align: center;
         }
-        .lp-cta-banner h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; color: var(--text-primary); margin-bottom: 16px; }
+        .lp-cta-banner h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; color: var(--text); margin-bottom: 16px; }
         .lp-cta-banner p { font-size: 17px; color: var(--text-secondary); margin-bottom: 36px; }
 
         /* Footer */
