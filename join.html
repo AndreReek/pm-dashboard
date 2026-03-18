@@ -3,8 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PM Dashboard — Join Organization</title>
+    <title>You've been invited — Fieldline</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -12,14 +13,14 @@
 <body>
     <div class="login-page">
         <div class="login-card">
-            <h1>📊 PM Dashboard</h1>
+            <h1><span class="brand-mark" aria-hidden="true"><svg viewBox="120 110 300 300" xmlns="http://www.w3.org/2000/svg" width="30" height="30"><path d="M311.740967,383.338989 C306.303558,377.827148 302.522125,371.605255 299.132233,364.342255 C296.457458,367.821045 295.805847,371.465546 294.295410,374.671021 C290.305725,383.138000 286.223846,391.493317 278.479065,397.366272 C271.253876,402.845154 263.037384,402.700195 256.121796,396.783264 C247.183640,389.135803 242.484497,378.795929 238.516922,368.163391 C231.386581,349.055023 227.681854,329.160889 225.577057,308.907684 C223.717926,291.018311 222.244095,273.104889 222.938980,255.126358 C224.200256,222.494049 227.016769,190.059158 238.392807,159.045731 C241.962921,149.312820 246.355240,139.983246 253.691376,132.388107 C262.314301,123.460754 272.431824,123.501930 281.257202,132.170502 C288.476227,139.261261 292.588501,148.112885 296.302856,157.251602 C297.039551,159.064133 297.760345,160.883102 298.705292,163.239883 C301.947113,158.150864 304.572815,153.365326 307.823975,149.051147 C317.173340,136.644958 328.801483,136.619568 338.318481,148.963577 C348.451691,162.106857 352.728546,177.704300 356.254211,193.524384 C362.591797,221.961731 364.409485,250.843491 363.130402,279.836151 C361.948425,306.627808 358.655212,333.201447 349.366943,358.638489 C346.670410,366.023224 343.069916,372.983887 338.297607,379.252075 C330.795349,389.105804 321.319916,390.612274 311.740967,383.338989 M293.291840,180.043777 C294.041962,175.930466 297.705444,172.037643 293.069000,167.693329 C286.334564,161.383209 278.582489,161.809143 272.493164,169.610031 C268.054962,175.295731 264.827209,181.708878 262.542480,188.535675 C256.650848,206.139832 253.340271,224.331711 252.500320,242.785324 C251.403732,266.876801 251.434906,291.021942 256.384583,314.829559 C259.335358,329.022552 262.550507,343.140015 271.037354,355.349304 C273.262146,358.549957 275.805206,361.401093 279.474823,362.899750 C284.141327,364.805450 288.332550,363.563568 291.926666,360.324524 C294.111267,358.355743 296.220978,356.512085 294.934967,352.702942 C286.668365,328.217224 284.033051,302.723480 282.940125,277.149994 C281.549652,244.615128 284.690063,212.403671 293.291840,180.043777 M332.093445,331.497925 C337.154358,333.302277 340.623688,332.058502 343.698853,326.965881 C347.422211,320.799805 350.018005,314.141144 351.645111,307.118530 C357.114777,283.510986 357.518127,259.653107 354.499268,235.748917 C353.063599,224.381042 350.851746,213.070923 344.926910,202.914490 C342.685028,199.071350 340.344238,195.212250 335.267059,195.406265 C330.493744,195.588684 328.222382,199.308563 326.219910,203.073792 C319.513000,215.684677 317.406464,229.431030 316.097107,243.412506 C313.988098,265.933105 314.618439,288.289459 320.535858,310.221558 C322.600739,317.874939 324.985413,325.647095 332.093445,331.497925 Z"/><path d="M174.149292,181.174500 C189.591644,163.105347 207.832245,149.556564 229.884567,141.063095 C197.137817,175.299530 183.511795,216.720520 183.452347,262.976257 C183.392746,309.358093 197.364304,350.686798 230.655472,384.514252 C215.788101,386.066254 173.870895,349.941528 159.760284,323.802704 C134.226624,276.503571 139.499252,223.480453 174.149292,181.174500 Z"/><path d="M376.477386,288.241241 C372.447937,271.624573 372.153503,255.335770 375.750305,239.020096 C376.319336,236.438843 377.119812,233.851608 378.230377,231.460892 C379.681427,228.337158 381.093170,224.649765 385.415497,224.837997 C389.374634,225.010437 390.955322,228.418045 392.074646,231.481110 C396.710297,244.166763 397.877075,257.346619 396.829895,270.734650 C396.403259,276.189026 395.665710,281.623627 394.208191,286.928162 C393.278625,290.311249 392.187347,293.642792 390.109100,296.505310 C387.009277,300.774872 382.820587,300.763611 380.068298,296.320099 C378.599426,293.948639 377.736603,291.201752 376.477386,288.241241 Z"/></svg></span>Fieldline</h1>
             <p class="subtitle" id="subtitle">Checking your invite…</p>
 
             <div id="errorBox" class="login-error"></div>
 
             <!-- Loading state -->
             <div id="loadingState" style="text-align:center; padding:24px 0; color:var(--text-secondary); font-size:14px;">
-                Verifying invite link…
+                Checking your invite…
             </div>
 
             <!-- Invite details + join form -->
@@ -32,8 +33,8 @@
 
                 <!-- Tabs: sign in existing / create new -->
                 <div class="login-tabs">
-                    <button class="login-tab active" onclick="switchJoinTab('signin')">I have an account</button>
-                    <button class="login-tab" onclick="switchJoinTab('register')">Create account</button>
+                    <button class="login-tab active" onclick="switchJoinTab('signin')">Sign in to join</button>
+                    <button class="login-tab" onclick="switchJoinTab('register')">Create account & join</button>
                 </div>
 
                 <!-- Sign in form -->
@@ -46,7 +47,7 @@
                         <label class="form-label">Password</label>
                         <input type="password" id="siPassword" class="form-input" placeholder="••••••••" required>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="siBtn">Sign In & Join</button>
+                    <button type="submit" class="btn btn-primary" id="siBtn">Sign in and join</button>
                 </form>
 
                 <!-- Register form -->
@@ -59,24 +60,24 @@
                         <label class="form-label">Password</label>
                         <input type="password" id="regPassword" class="form-input" placeholder="Min. 6 characters" required minlength="6">
                     </div>
-                    <button type="submit" class="btn btn-primary" id="regBtn">Create Account & Join</button>
+                    <button type="submit" class="btn btn-primary" id="regBtn">Create account and join</button>
                 </form>
             </div>
 
             <!-- Invalid token state -->
             <div id="invalidState" style="display:none; text-align:center; padding:16px 0;">
                 <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">
-                    This invite link is invalid or has already been used.
+                    This invite link is no longer valid. It may have already been used or expired.
                 </p>
-                <a href="login.html" class="btn btn-secondary" style="display:inline-block;">Go to Sign In</a>
+                <a href="login.html" class="btn btn-secondary" style="display:inline-block;">Back to sign in</a>
             </div>
 
             <!-- Already a member state -->
             <div id="alreadyMemberState" style="display:none; text-align:center; padding:16px 0;">
                 <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">
-                    You are already a member of this organization.
+                    You're already part of this organization.
                 </p>
-                <a href="dashboard.html" class="btn btn-primary" style="display:inline-block;">Go to Dashboard</a>
+                <a href="dashboard.html" class="btn btn-primary" style="display:inline-block;">Open your dashboard</a>
             </div>
         </div>
     </div>
@@ -161,7 +162,7 @@
 
             // Show join form
             document.getElementById('orgNameDisplay').textContent = inviteData.orgName;
-            document.getElementById('roleDisplay').textContent = `You will join as: ${invite.role}`;
+            document.getElementById('roleDisplay').textContent = `Joining as: ${invite.role}`;
             document.getElementById('subtitle').textContent = `You've been invited to join ${inviteData.orgName}`;
             if (invite.email) document.getElementById('siEmail').value = invite.email;
             showState('joinState');
@@ -195,7 +196,7 @@
         async function handleJoinSignin(e) {
             e.preventDefault();
             hideError();
-            setLoading('siBtn', true, 'Sign In & Join');
+            setLoading('siBtn', true, 'Sign in and join');
 
             const email = document.getElementById('siEmail').value;
             const password = document.getElementById('siPassword').value;
@@ -206,14 +207,14 @@
                 await joinOrg(data.user.id);
             } catch (err) {
                 showError(err.message || 'Sign in failed.');
-                setLoading('siBtn', false, 'Sign In & Join');
+                setLoading('siBtn', false, 'Sign in and join');
             }
         }
 
         async function handleJoinRegister(e) {
             e.preventDefault();
             hideError();
-            setLoading('regBtn', true, 'Create Account & Join');
+            setLoading('regBtn', true, 'Create account and join');
 
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
@@ -223,13 +224,13 @@
                 if (error) throw error;
                 if (!data.session) {
                     showError('Check your email to confirm your account, then use the invite link again.');
-                    setLoading('regBtn', false, 'Create Account & Join');
+                    setLoading('regBtn', false, 'Create account and join');
                     return;
                 }
                 await joinOrg(data.user.id);
             } catch (err) {
                 showError(err.message || 'Registration failed.');
-                setLoading('regBtn', false, 'Create Account & Join');
+                setLoading('regBtn', false, 'Create account and join');
             }
         }
     </script>
