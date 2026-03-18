@@ -117,3 +117,4 @@ CREATE POLICY "subscriptions_member_read" ON subscriptions FOR SELECT USING (
 -- Migrations: add columns to existing deployments
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS "stepDurations" JSONB;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS "dueDate" DATE;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS "ganttData" JSONB;
