@@ -22,6 +22,22 @@
 
     <link rel="stylesheet" href="styles.css">
     <style>
+        /* ---- LANDING PAGE CSS VARIABLES (self-contained fallback) ---- */
+        :root {
+            --bg: #F8F9FA; --bg-alt: #F1F3F5; --card: #FFFFFF;
+            --text: #212529; --text-secondary: #6C757D; --text-muted: #ADB5BD;
+            --border: #DEE2E6; --primary: #D4AF37; --primary-hover: #B8961F;
+            --radius-md: 8px; --radius-lg: 12px;
+            --green-bg: #dff0e6; --green-text: #2d5a3e;
+            --yellow-bg: #faefd4; --yellow-text: #7a4e0a;
+            --red-bg: #f5e0db; --red-text: #7a2e1f;
+        }
+        [data-theme="dark"] {
+            --bg: #121416; --bg-alt: #1E2023; --card: #1E2023;
+            --text: #E9ECEF; --text-secondary: #9BA3AD; --text-muted: #6C757D;
+            --border: #2C2F33; --primary: #E5C55A;
+        }
+
         /* ---- LANDING PAGE STYLES ---- */
         body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
 
