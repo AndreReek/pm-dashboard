@@ -1599,10 +1599,11 @@
 
         async function saveSettingToCloud(key, previousValue) {
             const newValue = getSettingsArray(key);
+            const orgId = parseInt(currentOrgId, 10);
             // Try UPDATE first (row already exists)
             const { data: updated, error: updateError } = await db.from('Settings')
                 .update({ value: newValue })
-                .eq('org_id', currentOrgId)
+                .eq('org_id', orgId)
                 .eq('key', key)
                 .select('id');
             if (updateError) {
@@ -1613,8 +1614,21 @@
             // No existing row — INSERT
             if (!updated || updated.length === 0) {
                 const { error: insertError } = await db.from('Settings')
-                    .insert({ key, value: newValue, org_id: currentOrgId });
+                    .insert({ key, value: newValue, org_id: orgId });
                 if (insertError) {
+                    // 409 conflict: row exists but UPDATE missed it — retry as UPDATE
+                    if (insertError.code === '23505') {
+                        const { error: retryError } = await db.from('Settings')
+                            .update({ value: newValue })
+                            .eq('org_id', orgId)
+                            .eq('key', key);
+                        if (retryError) {
+                            if (previousValue !== undefined) setSettingsArray(key, previousValue);
+                            toast('Failed to save — change reverted', 'error');
+                            return false;
+                        }
+                        return true;
+                    }
                     if (previousValue !== undefined) setSettingsArray(key, previousValue);
                     toast('Failed to save — change reverted', 'error');
                     return false;
