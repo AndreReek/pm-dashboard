@@ -2,10 +2,17 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://ikgybeldlngntrpyzcnh.supabase.co wss://ikgybeldlngntrpyzcnh.supabase.co; img-src 'self' data: https://placehold.co; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), bluetooth=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  X-XSS-Protection: 1; mode=block
+  # SECURITY NOTE: 'unsafe-inline' in script-src neutralises XSS protection from CSP.
+  # To fix: move the inline <script> block in dashboard.html to an external .js file,
+  # then remove 'unsafe-inline' and add only the specific hash or nonce for any remaining
+  # inline scripts. This is tracked as a follow-up hardening task.
+  # 'strict-dynamic' is intentionally omitted until unsafe-inline is removed.
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://ikgybeldlngntrpyzcnh.supabase.co wss://ikgybeldlngntrpyzcnh.supabase.co; img-src 'self' data: https://placehold.co; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'
 
 /gantt.html
   X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; frame-ancestors 'self'
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'none'; object-src 'none'

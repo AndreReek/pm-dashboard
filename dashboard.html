@@ -95,7 +95,7 @@
                 <div class="topbar-actions">
                     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="themeBtn">🌙</button>
                     <button class="btn btn-ghost" onclick="exportCSV()" title="Export projects to CSV" aria-label="Export CSV">📥</button>
-                    <button class="btn btn-primary" onclick="openAddModal()" title="New project (N)" aria-label="New Project">+ New Project</button>
+                    <button class="btn btn-primary" id="newProjectBtn" onclick="openAddModal()" title="New project (N)" aria-label="New Project">+ New Project</button>
                 </div>
             </div>
 
@@ -174,8 +174,8 @@
                 <button class="modal-close" onclick="closeModal()" title="Close (Esc)">✕</button>
             </div>
             <div class="form-grid form-grid-2">
-                <div><label class="form-label">Project Name</label><input type="text" id="projectName" class="form-input" placeholder="e.g. Project Alpha"></div>
-                <div><label class="form-label">Client</label><input type="text" id="projectClient" class="form-input" placeholder="e.g. Acme Corp"></div>
+                <div><label class="form-label">Project Name</label><input type="text" id="projectName" class="form-input" placeholder="e.g. Project Alpha" maxlength="120"></div>
+                <div><label class="form-label">Client</label><input type="text" id="projectClient" class="form-input" placeholder="e.g. Acme Corp" maxlength="120"></div>
             </div>
             <div class="form-grid form-grid-3" style="margin-top:16px;">
                 <div><label class="form-label">Status</label>
@@ -213,7 +213,7 @@
                 <div><label class="form-label">High Risks</label><input type="number" id="projectRisks" class="form-input" value="0" min="0"></div>
             </div>
             <div style="margin-top:16px;"><label class="form-label">Action Required</label>
-                <textarea id="projectAction" class="form-textarea" placeholder="Describe any immediate action needed…"></textarea>
+                <textarea id="projectAction" class="form-textarea" placeholder="Describe any immediate action needed…" maxlength="2000"></textarea>
             </div>
             <div style="display:flex; gap:12px; margin-top:24px;">
                 <button class="btn btn-primary" style="flex:2;" onclick="saveProject()" id="saveBtn">Save</button>
@@ -500,9 +500,40 @@
         const HEALTH_ORDER = { critical: 0, warning: 1, healthy: 2 };
 
         // ---- SECURITY ----
-        function esc(str) {
+        // escapeHTML / esc: sanitize any user-controlled value before inserting into innerHTML.
+        // Must be applied to EVERY piece of data that originates from Supabase or user input.
+        function escapeHTML(str) {
             if (str == null) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        // Short alias used throughout the file
+        const esc = escapeHTML;
+
+        // Validate email format before sending to backend
+        function isValidEmail(email) {
+            // RFC-5321 practical check: local@domain.tld, max 254 chars
+            if (!email || email.length > 254) return false;
+            return /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(email);
+        }
+
+        // Validate a plain-text label: printable chars, max length, no HTML-injectable sequences
+        function isValidLabel(value, maxLen = 100) {
+            if (!value || typeof value !== 'string') return false;
+            const trimmed = value.trim();
+            if (trimmed.length === 0 || trimmed.length > maxLen) return false;
+            // Reject anything that looks like an HTML tag or JS injection attempt
+            if (/<|>|javascript:|data:/i.test(trimmed)) return false;
+            return true;
+        }
+
+        // Validate project name: printable chars, 1–120 characters
+        function isValidProjectName(value) {
+            return isValidLabel(value, 120);
         }
 
         // ---- WEEK UTILITIES ----
@@ -685,6 +716,21 @@
             if (!session) { window.location.href = 'login.html'; return; }
             currentUser = session.user;
 
+            // EMAIL VERIFICATION GUARD
+            // Supabase sets email_confirmed_at when the user clicks the confirmation link.
+            // Block access to the dashboard until the email is verified to prevent
+            // unverified accounts from creating data under an org they may not own.
+            if (!currentUser.email_confirmed_at) {
+                hideSplash();
+                document.getElementById('projectsContainer').innerHTML =
+                    '<div class="empty-state"><div class="icon">📧</div>' +
+                    '<h3>Please verify your email</h3>' +
+                    '<p>We sent a confirmation link to <strong>' + escapeHTML(currentUser.email) + '</strong>. ' +
+                    'Click the link in that email, then reload this page.</p>' +
+                    '<button class="btn btn-secondary" style="margin-top:12px;" onclick="handleLogout()">Sign out</button></div>';
+                return;
+            }
+
             const { data: memberships, error: memErr } = await db
                 .from('org_members').select('org_id, role').eq('user_id', currentUser.id);
 
@@ -768,15 +814,72 @@
         function updatePlanBadge() {
             const freeBadge = document.getElementById('planBadgeFree');
             const paidBadge = document.getElementById('planBadgePaid');
+            const newProjectBtn = document.getElementById('newProjectBtn');
+
             if (currentPlan === 'free') {
                 freeBadge.style.display = '';
                 paidBadge.style.display = 'none';
-                document.getElementById('freeUsageLabel').textContent = `${projects.length} / 10 projects`;
+
+                const count = projects.length;
+                const atLimit = count >= 10;
+                const nearLimit = count >= 8;
+
+                // Update sidebar usage counter with color warning
+                const usageLabel = document.getElementById('freeUsageLabel');
+                usageLabel.textContent = `${count} / 10 projects`;
+                usageLabel.style.color = atLimit
+                    ? 'var(--red, #e53e3e)'
+                    : nearLimit
+                        ? 'var(--yellow, #d69e2e)'
+                        : '';
+
+                // Add/remove LIMIT REACHED badge next to the counter
+                let limitBadge = document.getElementById('freeLimitBadge');
+                if (atLimit) {
+                    if (!limitBadge) {
+                        limitBadge = document.createElement('span');
+                        limitBadge.id = 'freeLimitBadge';
+                        limitBadge.style.cssText = 'display:inline-block; font-size:9px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; background:var(--red,#e53e3e); color:#fff; border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle;';
+                        limitBadge.textContent = 'LIMIT REACHED';
+                        usageLabel.appendChild(limitBadge);
+                    }
+                } else {
+                    if (limitBadge) limitBadge.remove();
+                }
+
+                // Disable / re-style the New Project button when at limit
+                if (newProjectBtn) {
+                    if (atLimit) {
+                        newProjectBtn.classList.remove('btn-primary');
+                        newProjectBtn.classList.add('btn-secondary');
+                        newProjectBtn.title = 'Upgrade to add more projects';
+                        newProjectBtn.setAttribute('aria-label', 'Project limit reached — Upgrade to Pro');
+                        // Replace label with UPGRADE badge if not already done
+                        if (!newProjectBtn.querySelector('.upgrade-badge')) {
+                            newProjectBtn.innerHTML = '+ New Project <span class="upgrade-badge" style="font-size:9px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; background:var(--primary,#a27e5e); color:#fff; border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle;">UPGRADE</span>';
+                        }
+                    } else {
+                        newProjectBtn.classList.add('btn-primary');
+                        newProjectBtn.classList.remove('btn-secondary');
+                        newProjectBtn.title = 'New project (N)';
+                        newProjectBtn.setAttribute('aria-label', 'New Project');
+                        newProjectBtn.textContent = '+ New Project';
+                    }
+                }
             } else {
                 freeBadge.style.display = 'none';
                 paidBadge.style.display = '';
                 document.getElementById('paidPlanLabel').textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
                 document.getElementById('paidSeatsLabel').textContent = currentPlan === 'studio' ? 'Unlimited seats' : `Up to ${currentSeats} seats`;
+
+                // Ensure button is fully enabled for paid plans
+                if (newProjectBtn) {
+                    newProjectBtn.classList.add('btn-primary');
+                    newProjectBtn.classList.remove('btn-secondary');
+                    newProjectBtn.title = 'New project (N)';
+                    newProjectBtn.setAttribute('aria-label', 'New Project');
+                    newProjectBtn.textContent = '+ New Project';
+                }
             }
         }
 
@@ -958,8 +1061,34 @@
         }
 
         async function saveProject() {
+            // Paywall: Free plan hard-limit of 10 projects (enforced here as second gate
+            // in addition to openAddModal, so direct calls cannot bypass the check)
+            if (!editingId && currentPlan === 'free' && projects.length >= 10) {
+                closeModal();
+                openUpgradeModal();
+                toast('You\'ve reached the 10-project limit on the Free plan. Upgrade to continue.', 'error');
+                return;
+            }
+
             const nome = document.getElementById('projectName').value.trim();
             if (!nome) { toast('Project name is required.', 'error'); document.getElementById('projectName').focus(); return; }
+            if (!isValidProjectName(nome)) {
+                toast('Project name is invalid. Max 120 characters, no HTML tags.', 'error');
+                document.getElementById('projectName').focus();
+                return;
+            }
+            const rawClient = document.getElementById('projectClient').value.trim();
+            if (rawClient && !isValidLabel(rawClient, 120)) {
+                toast('Client name is invalid. Max 120 characters, no HTML tags.', 'error');
+                document.getElementById('projectClient').focus();
+                return;
+            }
+            const rawAction = document.getElementById('projectAction').value.trim();
+            if (rawAction && rawAction.length > 2000) {
+                toast('Action Required text is too long (max 2000 characters).', 'error');
+                document.getElementById('projectAction').focus();
+                return;
+            }
 
             const rows = document.querySelectorAll('.supply-row-input');
             const scope = Array.from(rows).map(row => ({
@@ -1140,6 +1269,10 @@
         }
 
         window.addEventListener('message', async function(e) {
+            // SECURITY: Only accept postMessage from the same origin.
+            // The gantt.html iframe is same-origin, so window.location.origin is the
+            // expected source. Messages from third-party origins are silently dropped.
+            if (e.origin !== window.location.origin) return;
             if (!e.data || !e.data.type) return;
             if (e.data.type === 'gantt-ready' && _ganttProjectId !== null) {
                 document.getElementById('ganttFrame').contentWindow.postMessage(
@@ -1212,22 +1345,31 @@
 
                         const wfColor = getMetricColor('workflow', progPerc);
 
+                        // SECURITY: p.id comes from Supabase (integer PK). Cast to integer
+                        // and reject anything that is not a safe numeric id to prevent
+                        // attribute injection via crafted id values in onclick handlers.
+                        const safeId = parseInt(p.id, 10);
+                        if (!Number.isFinite(safeId)) return; // skip malformed records
+
                         // Supply HTML
                         let supplyHtml = '<p style="font-size:11px; color:var(--text-muted);">No items.</p>';
                         if (p.supplyScope && p.supplyScope.length > 0) {
                             supplyHtml = p.supplyScope.map(s => {
-                                const statusClass = 'status-' + String(s.status || '').toLowerCase().replace(/ /g, '_');
+                                // SECURITY: statusClass used as a CSS class attribute value —
+                                // restrict to alphanumeric, hyphens, underscores only.
+                                const rawStatus = String(s.status || '').toLowerCase().replace(/ /g, '_');
+                                const safeStatusClass = 'status-' + rawStatus.replace(/[^a-z0-9_-]/g, '');
                                 return `<div style="font-size:12px; margin-bottom:10px; border-bottom:1px dashed var(--border); padding-bottom:5px;">
                                     <strong>${esc(s.tech)}</strong> (${esc(s.brand)})<br>Qty: ${esc(String(s.units))}
-                                    <br><span class="supply-badge ${esc(statusClass)}">${esc(String(s.status || '').replace(/_/g, ' '))}</span>
+                                    <br><span class="supply-badge ${safeStatusClass}">${esc(String(s.status || '').replace(/_/g, ' '))}</span>
                                 </div>`;
                             }).join('');
                         }
 
-                        // Workflow steps
+                        // Workflow steps — use safeId (integer) in all inline event handlers and element ids
                         const stepsHtml = WORKFLOW_STEPS.map((step, i) =>
-                            `<div class="workflow-step ${i === activeIdx ? 'active-focus' : ''}" id="step-${p.id}-${i}">
-                                <input type="checkbox" ${milestones[i] ? 'checked' : ''} onchange="toggleStep(${p.id}, ${i})">
+                            `<div class="workflow-step ${i === activeIdx ? 'active-focus' : ''}" id="step-${safeId}-${i}">
+                                <input type="checkbox" ${milestones[i] ? 'checked' : ''} onchange="toggleStep(${safeId}, ${i})">
                                 <span>${esc(step)}</span>
                             </div>`
                         ).join('');
@@ -1243,9 +1385,9 @@
                                     ${dueInfo ? `<span class="due-badge ${dueInfo.cls}">${esc(dueInfo.label)}</span>` : ''}
                                 </h2>
                                 <div style="display:flex; gap:4px;">
-                                    <button class="btn btn-ghost" onclick="duplicateProject(${p.id})" title="Duplicate">📋</button>
-                                    <button class="btn btn-ghost" onclick="editProject(${p.id})" title="Edit">✏️</button>
-                                    <button class="btn btn-danger" onclick="deleteProject(${p.id})" title="Delete">🗑️</button>
+                                    <button class="btn btn-ghost" onclick="duplicateProject(${safeId})" title="Duplicate">📋</button>
+                                    <button class="btn btn-ghost" onclick="editProject(${safeId})" title="Edit">✏️</button>
+                                    <button class="btn btn-danger" onclick="deleteProject(${safeId})" title="Delete">🗑️</button>
                                 </div>
                             </div>
                             <p style="font-size:13px; margin-bottom:14px; color:var(--text-secondary);">
@@ -1268,14 +1410,15 @@
                                 <div class="aside-panel" style="overflow:hidden;">
                                     <div class="aside-title" style="display:flex; align-items:center; justify-content:space-between;">
                                         <span>Workflow <span>${progPerc}%</span></span>
-                                        <button onclick="openGanttModal(${p.id})" class="btn-cp-toggle" title="Open Gantt Chart">📅</button>
+                                        <button onclick="openGanttModal(${safeId})" class="btn-cp-toggle" title="Open Gantt Chart">📅</button>
                                     </div>
-                                    <div class="workflow-carousel" id="carousel-${p.id}">${stepsHtml}</div>
+                                    <div class="workflow-carousel" id="carousel-${safeId}">${stepsHtml}</div>
                                 </div>
                             </div>
                         `;
                         sectionBody.appendChild(card);
-                        requestAnimationFrame(() => setTimeout(() => centerActiveStep(p.id, activeIdx), 50));
+                        // Use safeId (integer) in all DOM lookups — matches the ids set above
+                        requestAnimationFrame(() => setTimeout(() => centerActiveStep(safeId, activeIdx), 50));
                     });
                 });
 
@@ -1461,6 +1604,11 @@
             const input = document.getElementById(`newItem-${key}`);
             const val = input.value.trim();
             if (!val) return;
+            if (!isValidLabel(val, 100)) {
+                toast('Invalid value. Max 100 characters, no HTML tags.', 'error');
+                input.focus();
+                return;
+            }
             const arr = getSettingsArray(key);
             if (arr.includes(val)) { toast('Already exists', 'info'); return; }
             const prev = [...arr];
@@ -1530,6 +1678,15 @@
 
             const isAdmin = currentUserRole === 'admin';
 
+            // ---- SEAT LIMIT ENFORCEMENT ----
+            // Determine whether the current org can invite more members.
+            // Seat limits: Free = 1 (owner only, no invites), Pro = 5, Studio = unlimited.
+            const seatLimit = currentPlan === 'studio' ? Infinity
+                            : currentPlan === 'pro'    ? currentSeats   // currentSeats comes from subscriptions.seats (default 5)
+                            : 1; // free
+            const seatsFull = members.length >= seatLimit;
+            const canInvite = isAdmin && currentPlan !== 'free' && !seatsFull;
+
             const membersHtml = members.map(m => {
                 const isMe = m.user_id === currentUser.id;
                 const roleLabel = m.role === 'admin' ? '<span class="badge badge-high" style="font-size:10px;">Admin</span>' : '<span class="badge badge-medium" style="font-size:10px;">Member</span>';
@@ -1561,11 +1718,46 @@
                         </div>`).join('')}
                 </div>` : '';
 
-            const inviteFormHtml = isAdmin ? `
+            // Build the invite form section, varying by plan and seat state
+            let inviteFormHtml;
+            if (!isAdmin) {
+                inviteFormHtml = '<p style="font-size:12px; color:var(--text-secondary); margin-top:16px;">Only admins can invite team members.</p>';
+            } else if (currentPlan === 'free') {
+                // Free plan: no invites allowed at all
+                inviteFormHtml = `
                 <div style="margin-top:20px; padding:14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg);">
-                    <div style="font-size:13px; font-weight:600; margin-bottom:10px;">Invite a teammate</div>
+                    <div style="font-size:13px; font-weight:600; margin-bottom:6px;">Invite a teammate</div>
+                    <div style="display:flex; align-items:center; gap:10px; padding:10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);">
+                        <span style="font-size:20px;">🔒</span>
+                        <div style="flex:1;">
+                            <div style="font-size:12px; font-weight:600; margin-bottom:2px;">Team invitations require a paid plan</div>
+                            <div style="font-size:11px; color:var(--text-secondary);">Free accounts are limited to 1 seat (owner only).</div>
+                        </div>
+                        <button class="btn btn-primary" style="font-size:12px; white-space:nowrap;" onclick="openUpgradeModal()">Upgrade to Pro</button>
+                    </div>
+                </div>`;
+            } else if (seatsFull) {
+                // Paid plan but seat cap reached
+                inviteFormHtml = `
+                <div style="margin-top:20px; padding:14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg);">
+                    <div style="font-size:13px; font-weight:600; margin-bottom:6px;">Invite a teammate</div>
+                    <div style="display:flex; align-items:center; gap:10px; padding:10px; background:var(--bg); border:1px solid var(--red,#e53e3e); border-radius:var(--radius);">
+                        <span style="font-size:20px;">⚠️</span>
+                        <div style="flex:1;">
+                            <div style="font-size:12px; font-weight:600; margin-bottom:2px; color:var(--red,#e53e3e);">Seat limit reached (${members.length} / ${seatLimit})</div>
+                            <div style="font-size:11px; color:var(--text-secondary);">Your ${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} plan includes up to ${seatLimit} seats. Remove a member or upgrade to Studio for unlimited seats.</div>
+                        </div>
+                        <button class="btn btn-primary" style="font-size:12px; white-space:nowrap;" onclick="openUpgradeModal()">Upgrade</button>
+                    </div>
+                </div>`;
+            } else {
+                // Paid plan with seats available
+                const remaining = seatLimit === Infinity ? '∞' : seatLimit - members.length;
+                inviteFormHtml = `
+                <div style="margin-top:20px; padding:14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius-lg);">
+                    <div style="font-size:13px; font-weight:600; margin-bottom:10px;">Invite a teammate <span style="font-size:11px; font-weight:400; color:var(--text-secondary);">${remaining} seat${remaining === 1 ? '' : 's'} remaining</span></div>
                     <div style="display:flex; gap:8px;">
-                        <input type="email" id="inviteEmail" class="form-input" placeholder="colleague@company.com" style="flex:1;">
+                        <input type="email" id="inviteEmail" class="form-input" placeholder="colleague@company.com" style="flex:1;" maxlength="254" autocomplete="email">
                         <select id="inviteRole" class="form-select" style="width:110px;">
                             <option value="member">Member</option>
                             <option value="admin">Admin</option>
@@ -1573,7 +1765,8 @@
                         <button class="btn btn-primary" onclick="inviteTeamMember()">Invite</button>
                     </div>
                     <p style="font-size:11px; color:var(--text-secondary); margin-top:8px;">An invite link will be generated. Share it with your teammate.</p>
-                </div>` : '<p style="font-size:12px; color:var(--text-secondary); margin-top:16px;">Only admins can invite team members.</p>';
+                </div>`;
+            }
 
             container.innerHTML = `
                 <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">Members (${members.length})</div>
@@ -1584,9 +1777,48 @@
         }
 
         async function inviteTeamMember() {
+            // ---- SEAT LIMIT GATE ----
+            // Free plan: invites are completely disabled (1 seat = owner only)
+            if (currentPlan === 'free') {
+                toast('Team invitations require a paid plan. Upgrade to Pro to add teammates.', 'error');
+                openUpgradeModal();
+                return;
+            }
+
+            // Pro plan: fetch current member count and check against seat cap
+            if (currentPlan !== 'studio') {
+                const { count, error: countErr } = await db
+                    .from('org_members')
+                    .select('user_id', { count: 'exact', head: true })
+                    .eq('org_id', currentOrgId);
+
+                if (countErr) {
+                    toast('Could not verify seat count. Please try again.', 'error');
+                    return;
+                }
+
+                const limit = currentSeats; // from subscriptions.seats
+                if (count >= limit) {
+                    toast(`Seat limit reached (${count} / ${limit}). Upgrade to Studio for unlimited seats.`, 'error');
+                    openUpgradeModal();
+                    return;
+                }
+            }
+            // ---- END SEAT LIMIT GATE ----
+
             const email = document.getElementById('inviteEmail').value.trim().toLowerCase();
             const role = document.getElementById('inviteRole').value;
             if (!email) { toast('Enter an email address.', 'error'); return; }
+            if (!isValidEmail(email)) {
+                toast('Please enter a valid email address.', 'error');
+                document.getElementById('inviteEmail').focus();
+                return;
+            }
+            // Whitelist role values to prevent injection of unexpected role strings
+            if (!['member', 'admin'].includes(role)) {
+                toast('Invalid role selected.', 'error');
+                return;
+            }
 
             const token = crypto.randomUUID();
             const { data, error } = await db.from('invitations').insert([{
