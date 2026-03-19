@@ -172,7 +172,8 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authData.session.access_token}`
+                        'Authorization': `Bearer ${authData.session.access_token}`,
+                        'apikey': SUPABASE_KEY
                     },
                     body: JSON.stringify({ orgName })
                 });
