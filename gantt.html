@@ -737,9 +737,15 @@ function renderStats() {
 }
 
 // ── Chart ──
-var ZOOM = { months:8, weeks:20, days:42 };
+var ZOOM = { months:1, weeks:2, days:4 };
 
-function cellW() { return ZOOM[S.ui.zoom] || 20; }
+function cellW(totalDays) {
+  var wrap = document.getElementById('ganttWrap');
+  var leftW = (S.ui.showNames !== false) ? 260 : 0;
+  var availW = wrap ? Math.max(200, wrap.clientWidth - leftW) : 200;
+  var auto = availW / (totalDays || 1);
+  return Math.max(auto, auto * (ZOOM[S.ui.zoom] || 1));
+}
 
 function projStart() {
   var s = S.project.startDate;
@@ -772,9 +778,9 @@ function renderChart() {
     return;
   }
 
-  var cw = cellW();
   var ps = projStart();
-  var totalDays = C.projectEnd + Math.max(60, Math.ceil(C.projectEnd*0.3));
+  var totalDays = C.projectEnd + Math.max(14, Math.ceil(C.projectEnd*0.15));
+  var cw = cellW(totalDays);
   var today = new Date();
   var todayOff = Math.round((today - ps) / 864e5);
   var showWe = S.ui.showWe;
@@ -1147,7 +1153,8 @@ function startResize(e, taskId, bar) {
   var startX = e.clientX;
   var t = S.tasks.find(function(x){ return x.id===taskId; });
   var origDur = t.dur;
-  var cw = cellW();
+  var totalDays = C.projectEnd + Math.max(14, Math.ceil(C.projectEnd*0.15));
+  var cw = cellW(totalDays);
   _resizing = taskId;
   bar.classList.add('bar-dragging');
 
