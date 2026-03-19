@@ -749,20 +749,24 @@
 
             if (memErr || !memberships || memberships.length === 0) {
                 toast('Setting up your organization…', 'info');
-                const orgName = currentUser.email.split('@')[1] || 'My Organization';
-                const { data: org, error: orgErr } = await db.from('organizations').insert([{ name: orgName }]).select().single();
-                if (orgErr) { toast('Setup failed. Try registering again.', 'error'); return; }
-                await db.from('org_members').insert([{ user_id: currentUser.id, org_id: org.id, role: 'admin' }]);
-                const pendingTemplateId = sessionStorage.getItem('pendingTemplateId') || 'automation';
-                const tpl = TEMPLATES.find(t => t.id === pendingTemplateId) || TEMPLATES[0];
-                const rows = Object.entries(tpl.settings).map(([key, value]) => ({ key, value, org_id: org.id }));
-                await db.from('Settings').insert(rows);
-                await db.from('Settings').insert([{ key: 'active_template', value: [tpl.id], org_id: org.id }]);
-                activeTemplateId = tpl.id;
-                sessionStorage.removeItem('pendingTemplateId');
-                currentOrgId = org.id;
-                currentOrgName = orgName;
-                toast('Organization created: ' + orgName, 'success');
+                const orgName = localStorage.getItem('pending_org_name') || currentUser.email.split('@')[0] || 'My Organization';
+                const session = (await db.auth.getSession()).data.session;
+                if (!session) { toast('Session expired. Please log in again.', 'error'); return; }
+                const setupResp = await fetch(`${SUPABASE_URL}/functions/v1/create-org`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'apikey': SUPABASE_KEY
+                    },
+                    body: JSON.stringify({ orgName })
+                });
+                const setupResult = await setupResp.json();
+                if (!setupResp.ok) { toast('Setup failed: ' + (setupResult.error || 'unknown error'), 'error'); return; }
+                localStorage.removeItem('pending_org_name');
+                currentOrgId = setupResult.org.id;
+                currentOrgName = setupResult.org.name;
+                toast('Organization created: ' + currentOrgName, 'success');
             } else {
                 currentOrgId = memberships[0].org_id;
                 const { data: org } = await db.from('organizations').select('name').eq('id', currentOrgId).single();

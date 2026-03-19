@@ -158,6 +158,9 @@
                 const { data: authData, error: authError } = await db.auth.signUp({ email, password });
                 if (authError) throw authError;
 
+                // Save orgName for post-confirmation setup (in case email confirmation is required)
+                localStorage.setItem('pending_org_name', orgName);
+
                 // If email confirmation is required, tell the user
                 if (!authData.session) {
                     showError('Check your inbox to confirm your account, then come back to sign in.');
