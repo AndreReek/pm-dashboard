@@ -1,3 +1,17 @@
+# Claude Code working directory
 .claude/
-*.env
+
+# Environment variable files — real values go in Vercel dashboard, never in the repo
+.env
 .env.*
+.env.local
+.env.*.local
+
+# Supabase local development artefacts
+supabase/.temp/
+
+# Node modules — installed locally when using Vercel CLI (vercel dev)
+node_modules/
+
+# Vercel CLI local link metadata — contains project/org IDs, not needed in repo
+.vercel/
