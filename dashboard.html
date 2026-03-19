@@ -1598,14 +1598,27 @@
         }
 
         async function saveSettingToCloud(key, previousValue) {
-            const { error } = await db.from('Settings')
-                .upsert({ key, value: getSettingsArray(key), org_id: currentOrgId }, { onConflict: 'org_id,key' });
-            if (error) {
-                if (previousValue !== undefined) {
-                    setSettingsArray(key, previousValue);
-                }
+            const newValue = getSettingsArray(key);
+            // Try UPDATE first (row already exists)
+            const { data: updated, error: updateError } = await db.from('Settings')
+                .update({ value: newValue })
+                .eq('org_id', currentOrgId)
+                .eq('key', key)
+                .select('id');
+            if (updateError) {
+                if (previousValue !== undefined) setSettingsArray(key, previousValue);
                 toast('Failed to save — change reverted', 'error');
                 return false;
+            }
+            // No existing row — INSERT
+            if (!updated || updated.length === 0) {
+                const { error: insertError } = await db.from('Settings')
+                    .insert({ key, value: newValue, org_id: currentOrgId });
+                if (insertError) {
+                    if (previousValue !== undefined) setSettingsArray(key, previousValue);
+                    toast('Failed to save — change reverted', 'error');
+                    return false;
+                }
             }
             return true;
         }
