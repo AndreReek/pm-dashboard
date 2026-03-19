@@ -87,6 +87,10 @@
         </aside>
 
         <!-- MAIN CONTENT -->
+        <div id="trialBanner" style="display:none; background:#f59e0b; color:#1a1a1a; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; position:relative; z-index:100;">
+            &#x23F3; Sei in prova gratuita — <span id="trialDaysLeft"></span> giorni rimanenti.
+            <a href="#" onclick="document.getElementById('upgradeModal').style.display='flex'" style="color:#1a1a1a; text-decoration:underline; margin-left:8px;">Passa a Pro &rarr;</a>
+        </div>
         <main class="main-content">
             <div class="topbar">
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -484,6 +488,7 @@
         let currentOrgName = '';
         let currentUserRole = 'member';
         let currentPlan = 'free';   // 'free' | 'pro' | 'studio'
+        let trialEndsAt = null;
         let currentSeats = 1;
         let confirmCallback = null;
         let closedCollapsed = true;
@@ -800,13 +805,19 @@
             try {
                 const { data } = await db
                     .from('subscriptions')
-                    .select('plan, seats, status')
+                    .select('plan, seats, status, trial_ends_at')
                     .eq('org_id', currentOrgId)
                     .single();
 
+                window._subStatus = data?.status || 'active';
                 if (data && data.status !== 'canceled') {
                     currentPlan = data.plan || 'free';
                     currentSeats = data.seats || 1;
+                    trialEndsAt = data?.trial_ends_at || null;
+                    const isTrialing = data?.status === 'trialing' && trialEndsAt && new Date(trialEndsAt) > new Date();
+                    if (isTrialing) {
+                        currentPlan = 'pro'; // trial ha features Pro
+                    }
                 } else {
                     currentPlan = 'free';
                     currentSeats = 1;
@@ -816,6 +827,7 @@
                 currentSeats = 1;
             }
             updatePlanBadge();
+            updateTrialBanner();
         }
 
         function updatePlanBadge() {
@@ -887,6 +899,17 @@
                     newProjectBtn.setAttribute('aria-label', 'New Project');
                     newProjectBtn.textContent = '+ New Project';
                 }
+            }
+        }
+
+        function updateTrialBanner() {
+            const banner = document.getElementById('trialBanner');
+            if (!banner) return;
+            const isTrialing = window._subStatus === 'trialing' && trialEndsAt && new Date(trialEndsAt) > new Date();
+            if (isTrialing) {
+                const daysLeft = Math.ceil((new Date(trialEndsAt) - new Date()) / (1000*60*60*24));
+                document.getElementById('trialDaysLeft').textContent = daysLeft;
+                banner.style.display = 'block';
             }
         }
 

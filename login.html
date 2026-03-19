@@ -190,6 +190,17 @@
                     .insert([{ user_id: authData.user.id, org_id: org.id, role: 'admin' }]);
                 if (memberError) throw memberError;
 
+                // 3b. Crea subscription con trial 14 giorni
+                const trialEnd = new Date();
+                trialEnd.setDate(trialEnd.getDate() + 14);
+                await db.from('subscriptions').insert([{
+                    org_id: org.id,
+                    plan: 'free',
+                    status: 'trialing',
+                    seats: 5,
+                    trial_ends_at: trialEnd.toISOString()
+                }]);
+
                 // 4. Clone default settings for this org
                 const settingsRows = DEFAULT_SETTINGS.map(s => ({ ...s, org_id: org.id }));
                 const { error: settingsError } = await db
