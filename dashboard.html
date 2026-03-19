@@ -1599,7 +1599,7 @@
 
         async function saveSettingToCloud(key, previousValue) {
             const { error } = await db.from('Settings')
-                .upsert({ key, value: getSettingsArray(key), org_id: currentOrgId }, { onConflict: 'key,org_id' });
+                .upsert({ key, value: getSettingsArray(key), org_id: currentOrgId }, { onConflict: 'org_id,key' });
             if (error) {
                 if (previousValue !== undefined) {
                     setSettingsArray(key, previousValue);
