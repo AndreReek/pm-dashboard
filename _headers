@@ -5,3 +5,7 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://ikgybeldlngntrpyzcnh.supabase.co wss://ikgybeldlngntrpyzcnh.supabase.co; img-src 'self' data: https://placehold.co; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'
+
+/gantt.html
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; frame-ancestors 'self'

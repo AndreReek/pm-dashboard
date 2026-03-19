@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Critical Path Gantt</title>
+<style>
+:root {
+  --bg:       #0f172a;
+  --bg2:      #1e293b;
+  --bg3:      #293548;
+  --bg4:      #334155;
+  --text:     #f1f5f9;
+  --text2:    #94a3b8;
+  --border:   #2d3f55;
+  --accent:   #3b82f6;
+  --critical: #ef4444;
+  --success:  #10b981;
+  --warning:  #f59e0b;
+  --row-h:    44px;
+  --hdr-h:    52px;
+  --tl-h:     52px;
+  --left-w:   260px;
+}
+[data-theme="light"] {
+  --bg:     #f1f5f9;
+  --bg2:    #ffffff;
+  --bg3:    #e8eef5;
+  --bg4:    #dde5ef;
+  --text:   #0f172a;
+  --text2:  #64748b;
+  --border: #cbd5e1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px}
+
+/* ── Header ── */
+header{height:var(--hdr-h);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:200}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--text);text-decoration:none}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center}
+#projectName{background:transparent;border:none;color:var(--text);font-size:15px;font-weight:600;outline:none;min-width:120px;max-width:260px;padding:3px 6px;border-radius:6px;transition:background .15s}
+#projectName:hover{background:var(--bg3)}
+#projectName:focus{background:var(--bg3);box-shadow:0 0 0 2px var(--accent)}
+.hdr-sep{width:1px;height:20px;background:var(--border)}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;white-space:nowrap}
+.btn svg{flex-shrink:0}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{filter:brightness(1.12)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-icon{padding:6px;border-radius:8px;border:none;cursor:pointer;background:transparent;color:var(--text2);display:inline-flex;align-items:center;transition:all .15s}
+.btn-icon:hover{background:var(--bg3);color:var(--text)}
+
+/* ── View-Only mode ── */
+body.view-only .vo-hide{display:none!important}
+body.view-only .sidebar{display:none!important}
+body.view-only .sidebar-toggle{display:none!important}
+.vo-badge{display:none;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#f59e0b;font-size:11px;font-weight:600;white-space:nowrap}
+body.view-only .vo-badge{display:flex}
+
+/* ── Layout ── */
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--left-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .2s}
+.sidebar.collapsed{width:0;border-right:none;overflow:hidden}
+.sidebar-toggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:150;background:var(--bg2);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;width:16px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:left .2s,background .15s}
+.sidebar-toggle:hover{background:var(--bg3);color:var(--text)}
+.sb-head{padding:10px 10px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sb-head h2{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.task-list{flex:1;overflow-y:auto;padding:6px}
+.task-item{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:7px;cursor:pointer;transition:background .1s;border:1px solid transparent}
+.task-item:hover{background:var(--bg3)}
+.task-item.sel{background:var(--bg3);border-color:var(--accent)}
+.task-item.drag-over{border-color:var(--accent);background:rgba(59,130,246,.1)}
+.task-item.dragging{opacity:.35;background:var(--bg3)}
+.drag-handle{display:none;flex-shrink:0;cursor:grab;color:var(--text2);padding:2px 1px;border-radius:3px;align-items:center}
+.drag-handle:active{cursor:grabbing}
+.task-item:hover .drag-handle{display:flex}
+.t-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.t-name{flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-dur{font-size:11px;color:var(--text2);flex-shrink:0}
+.t-acts{display:none;gap:2px}
+.task-item:hover .t-acts{display:flex}
+.iBtn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;border:none;background:transparent;cursor:pointer;color:var(--text2);transition:all .1s}
+.iBtn:hover{background:var(--bg4);color:var(--text)}
+.iBtn.del:hover{background:var(--critical);color:#fff}
+.sb-legend{padding:10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px}
+.leg-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2)}
+.leg-clr{width:20px;height:6px;border-radius:3px}
+.sb-stats{padding:8px 10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text2)}
+.sb-stats strong{color:var(--text)}
+
+/* ── Chart area ── */
+.chart-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chart-tb{padding:6px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--bg2)}
+.chart-tb label{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
+.chart-tb input[type=checkbox]{cursor:pointer;accent-color:var(--accent)}
+.chart-tb input[type=date]{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text);outline:none;cursor:pointer}
+.chart-tb input[type=date]:focus{border-color:var(--accent)}
+.zoom-grp{display:flex;gap:2px}
+.zoom-btn{padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:11px;color:var(--text2);transition:all .12s}
+.zoom-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.zoom-btn:hover:not(.active){background:var(--bg3);color:var(--text)}
+
+/* ── Gantt wrap (scrollable) ── */
+.gantt-wrap{flex:1;overflow:auto;position:relative}
+.gantt-wrap::-webkit-scrollbar{width:8px;height:8px}
+.gantt-wrap::-webkit-scrollbar-track{background:transparent}
+.gantt-wrap::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+.gantt-wrap::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+
+/* Gantt inner (grows as needed) */
+.gantt-inner{display:flex;flex-direction:column;min-height:100%;position:relative}
+
+/* ── Timeline header ── */
+.gantt-hdr{position:sticky;top:0;z-index:100;display:flex;height:var(--tl-h);background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.gantt-hdr-left{width:var(--left-w);flex-shrink:0;border-right:1px solid var(--border);position:sticky;left:0;z-index:110;background:var(--bg2);display:flex;align-items:flex-end;padding:0 10px 7px;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.tl-cells{flex:1;position:relative;overflow:hidden}
+
+/* ── Gantt rows area ── */
+.gantt-rows{position:relative;flex:1}
+.g-row{display:flex;height:var(--row-h);border-bottom:1px solid var(--border);transition:background .08s}
+.g-row:hover{background:rgba(255,255,255,.015)}
+.g-row.sel{background:rgba(59,130,246,.06)}
+.g-row-left{width:var(--left-w);flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:6px;position:sticky;left:0;background:var(--bg);z-index:10;cursor:pointer}
+.g-row.sel .g-row-left{background:rgba(59,130,246,.04)}
+.g-row:hover .g-row-left{background:var(--bg3)}
+.g-row.sel:hover .g-row-left{background:rgba(59,130,246,.08)}
+.rn{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-badge{font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;background:var(--critical);color:#fff;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.g-row-right{flex:1;position:relative;overflow:hidden}
+
+/* Hide names column */
+.hide-names .gantt-hdr-left,
+.hide-names .g-row-left { display:none }
+
+/* Grid lines in chart area */
+.gl{position:absolute;top:0;bottom:0;width:1px;background:var(--border);opacity:.35;pointer-events:none}
+.gl.wk{opacity:.5}
+.gl.we{width:auto;background:rgba(0,0,0,.06);opacity:1}
+[data-theme="light"] .gl.we{background:rgba(0,0,0,.04)}
+
+/* Today line */
+.today-line{position:absolute;top:0;width:2px;background:var(--accent);opacity:.8;pointer-events:none;z-index:30}
+.today-label{position:absolute;top:0;background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:0 4px 4px 0;white-space:nowrap;pointer-events:none;z-index:31;letter-spacing:.3px}
+
+/* ── Task bars ── */
+.tbar{position:absolute;top:6px;height:calc(var(--row-h) - 12px);border-radius:6px;cursor:pointer;display:flex;align-items:center;overflow:hidden;user-select:none;transition:filter .1s,box-shadow .1s;min-width:6px}
+.tbar:hover{filter:brightness(1.15);box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:20}
+.tbar.normal{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.tbar.crit{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 0 0 1px rgba(239,68,68,.3)}
+.tbar.milestone{border-radius:0;transform:rotate(45deg);width:18px!important;height:18px!important;top:13px;left:calc(var(--ms-left) - 9px);background:linear-gradient(135deg,#f59e0b,#d97706)}
+.tbar-lbl{padding:0 7px;font-size:10px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.tbar-prog{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.25);pointer-events:none}
+.tbar-resize{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,255,255,.15);opacity:0;transition:opacity .1s}
+.tbar:hover .tbar-resize{opacity:1}
+
+/* ── Dep SVG ── */
+.dep-svg{position:absolute;top:0;left:0;pointer-events:none;overflow:hidden;z-index:15}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(3px)}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:500px;max-width:92vw;max-height:92vh;overflow-y:auto;transform:translateY(10px) scale(.98);transition:transform .2s}
+.overlay.open .modal{transform:none}
+.modal-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-hdr h2{font-size:15px;font-weight:600}
+.modal-body{padding:18px 20px}
+.modal-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:10px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.fi{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;color:var(--text);outline:none;transition:border-color .15s;font-family:inherit}
+.fi:focus{border-color:var(--accent)}
+textarea.fi{resize:vertical;min-height:56px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.dep-list{display:flex;flex-direction:column;gap:3px;max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:6px}
+.dep-opt{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:5px;cursor:pointer;font-size:12px}
+.dep-opt:hover{background:var(--bg3)}
+.dep-opt input{cursor:pointer;accent-color:var(--accent)}
+.dep-empty{font-size:12px;color:var(--text2);padding:8px;text-align:center}
+
+/* ── Tooltip ── */
+.tip{position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.4);z-index:500;pointer-events:none;opacity:0;transition:opacity .12s;min-width:210px;max-width:280px}
+.tip.vis{opacity:1}
+.tip-title{font-weight:700;font-size:13px;margin-bottom:8px}
+.tip-row{display:flex;justify-content:space-between;gap:14px;margin-bottom:3px;color:var(--text2)}
+.tip-row span:last-child{color:var(--text);font-weight:500}
+.tip-crit{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);color:var(--critical);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.tip-notes{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);color:var(--text2);font-size:11px;line-height:1.45}
+
+/* ── Empty states ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text2);font-size:13px;padding:40px 20px;text-align:center}
+.empty svg{opacity:.25}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+
+/* ── Drag ghost ── */
+.bar-dragging{opacity:.5}
+
+/* ── Context menu ── */
+.ctx{position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:5px;z-index:900;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:160px}
+.ctx-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);transition:background .1s}
+.ctx-item:hover{background:var(--bg3);color:var(--text)}
+.ctx-item.danger:hover{background:var(--critical);color:#fff}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ── Animations ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.task-item{animation:fadeIn .15s ease}
+
+/* ── Iframe embedding ── */
+body.in-iframe .iframe-hide{display:none!important}
+.iframe-done{display:none}
+body.in-iframe .iframe-done{display:inline-flex}
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h8"/></svg>
+    </div>
+    CritPath
+  </div>
+  <div class="hdr-sep"></div>
+  <input type="text" id="projectName" value="My Project" placeholder="Project name" spellcheck="false">
+  <div class="spacer"></div>
+  <div class="vo-badge">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 1l4 4-9.5 9.5-5 1 1-5z"/><path d="M3 21h18"/></svg>
+    VIEW ONLY
+  </div>
+  <button class="btn btn-ghost btn-sm vo-hide iframe-hide" onclick="importFile()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    Import
+  </button>
+  <button class="btn-icon" onclick="toggleTheme()" title="Toggle theme">
+    <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+  </button>
+  <button class="btn btn-ghost btn-sm vo-hide iframe-hide" onclick="saveReadOnly()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+    View-Only
+  </button>
+  <button class="btn btn-primary btn-sm vo-hide iframe-hide" onclick="saveAsFile()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Save &amp; Share
+  </button>
+  <button class="btn btn-primary btn-sm iframe-done" onclick="sendDoneToParent()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    Done
+  </button>
+</header>
+
+<!-- ═══ BODY ═══ -->
+<div class="app-body" style="position:relative">
+
+  <!-- Sidebar collapse toggle -->
+  <button class="sidebar-toggle" id="sbToggle" onclick="toggleSidebar()" title="Toggle task list">
+    <svg id="sbToggleIcon" width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 1L1 6l5 5"/></svg>
+  </button>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <h2>Tasks</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+        Add
+      </button>
+    </div>
+    <div class="task-list" id="taskList"></div>
+    <div class="sb-legend">
+      <div class="leg-item"><div class="leg-clr" style="background:linear-gradient(to right,#3b82f6,#2563eb)"></div>Normal task</div>
+      <div class="leg-item"><div class="leg-clr" style="background:linear-gradient(to right,#ef4444,#dc2626)"></div>Critical path</div>
+      <div class="leg-item"><div class="leg-clr" style="background:linear-gradient(to right,#f59e0b,#d97706)"></div>Milestone</div>
+    </div>
+    <div class="sb-stats" id="sbStats"></div>
+  </aside>
+
+  <!-- Chart area -->
+  <main class="chart-area">
+    <div class="chart-tb">
+      <span style="font-size:11px;color:var(--text2);font-weight:600">ZOOM</span>
+      <div class="zoom-grp">
+        <button class="zoom-btn" data-z="months" onclick="setZoom(this)">Months</button>
+        <button class="zoom-btn active" data-z="weeks" onclick="setZoom(this)">Weeks</button>
+        <button class="zoom-btn" data-z="days" onclick="setZoom(this)">Days</button>
+      </div>
+      <div class="hdr-sep"></div>
+      <label><input type="checkbox" id="chkNames" checked onchange="toggleNames()"> Names</label>
+      <label><input type="checkbox" id="chkWe" checked onchange="render()"> Weekends</label>
+      <label><input type="checkbox" id="chkArr" checked onchange="render()"> Arrows</label>
+      <label><input type="checkbox" id="chkBars" checked onchange="render()"> Bars</label>
+      <label><input type="checkbox" id="chkProg" onchange="render()"> Progress</label>
+      <div class="spacer"></div>
+      <label style="color:var(--text2);font-size:11px">Start:
+        <input type="date" id="projStart" onchange="render()" style="margin-left:4px">
+      </label>
+    </div>
+
+    <div class="gantt-wrap" id="ganttWrap">
+      <div class="gantt-inner" id="ganttInner">
+        <!-- Header row (sticky top) -->
+        <div class="gantt-hdr" id="ganttHdr">
+          <div class="gantt-hdr-left">Task</div>
+          <div class="tl-cells" id="tlCells"></div>
+        </div>
+        <!-- Task rows -->
+        <div class="gantt-rows" id="ganttRows"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-hdr">
+      <h2 id="modalTitle">Add Task</h2>
+      <button class="btn-icon" onclick="closeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fId">
+      <div class="fg">
+        <label class="fl">Task Name *</label>
+        <input class="fi" type="text" id="fName" placeholder="e.g. Design mockups" autocomplete="off">
+      </div>
+      <div class="form-row3">
+        <div class="fg">
+          <label class="fl">Duration (days)</label>
+          <input class="fi" type="number" id="fDur" min="0" value="5">
+        </div>
+        <div class="fg">
+          <label class="fl">Progress %</label>
+          <input class="fi" type="number" id="fProg" min="0" max="100" value="0">
+        </div>
+        <div class="fg">
+          <label class="fl">Color</label>
+          <select class="fi" id="fColor">
+            <option value="">Auto</option>
+            <option value="#8b5cf6">Purple</option>
+            <option value="#10b981">Emerald</option>
+            <option value="#f59e0b">Amber</option>
+            <option value="#06b6d4">Cyan</option>
+            <option value="#f97316">Orange</option>
+            <option value="#ec4899">Pink</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Notes</label>
+        <textarea class="fi" id="fNotes" rows="2" placeholder="Optional description..."></textarea>
+      </div>
+      <div class="fg">
+        <label class="fl">Depends on (predecessors)</label>
+        <div class="dep-list" id="depList"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOOLTIP ═══ -->
+<div class="tip" id="tip">
+  <div class="tip-title" id="tipTitle"></div>
+  <div class="tip-row"><span>Duration</span><span id="tipDur"></span></div>
+  <div class="tip-row"><span>Start (EST)</span><span id="tipStart"></span></div>
+  <div class="tip-row"><span>Finish (EFT)</span><span id="tipEnd"></span></div>
+  <div class="tip-row" id="tipFloatRow"><span>Total Float</span><span id="tipFloat"></span></div>
+  <div class="tip-row" id="tipFreeRow"><span>Free Float</span><span id="tipFree"></span></div>
+  <div class="tip-row" id="tipProgRow"><span>Progress</span><span id="tipProg"></span></div>
+  <div class="tip-crit" id="tipCrit" style="display:none">&#9889; On Critical Path</div>
+  <div class="tip-notes" id="tipNotes" style="display:none"></div>
+</div>
+
+<!-- ═══ CONTEXT MENU ═══ -->
+<div class="ctx" id="ctx" style="display:none">
+  <div class="ctx-item" id="ctxEdit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg> Edit Task</div>
+  <div class="ctx-item" id="ctxDup"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Duplicate</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctxDel"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg> Delete</div>
+</div>
+
+<!-- ═══ EMBEDDED DATA (replaced on save) ═══ -->
+<script id="gantt-data" type="application/json">null</script>
+
+<!-- ═══ APP SCRIPT ═══ -->
+<script>
+'use strict';
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+var S = {
+  tasks: [],
+  project: { name:'My Project', startDate:'', theme:'dark' },
+  ui: { zoom:'weeks', showWe:true, showArr:true, showProg:false, selId:null }
+};
+
+// Computed (transient - not serialized)
+var C = { tasks:[], projectEnd:0, critical:[] };
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+var LS_KEY = 'critpath_autosave';
+
+function autoSave() {
+  try { localStorage.setItem(LS_KEY, buildStateJson()); } catch(e) {}
+  if (window.parent !== window) {
+    try { window.parent.postMessage({ type:'gantt-autosave', state: JSON.parse(buildStateJson()) }, '*'); } catch(e) {}
+  }
+}
+
+function sendDoneToParent() {
+  if (window.parent !== window) {
+    window.parent.postMessage({ type:'gantt-done', state: JSON.parse(buildStateJson()) }, '*');
+  }
+}
+
+function init() {
+  // 1. Embedded data (from a saved file)
+  try {
+    var raw = document.getElementById('gantt-data').textContent.trim();
+    if (raw && raw !== 'null') {
+      var d = JSON.parse(raw);
+      if (d && d.tasks) S = d;
+    }
+  } catch(e) {}
+
+  // 2. localStorage autosave (survives refresh when working on local file)
+  if (!S.tasks.length) {
+    try {
+      var ls = localStorage.getItem(LS_KEY);
+      if (ls) {
+        var d2 = JSON.parse(ls);
+        if (d2 && d2.tasks && d2.tasks.length) S = d2;
+      }
+    } catch(e) {}
+  }
+
+  // 3. Demo data if nothing found
+  if (!S.tasks.length) {
+    S.tasks = [
+      {id:'t1',name:'Project Kick-off',dur:3,deps:[],color:'',notes:'Initial planning session',prog:100},
+      {id:'t2',name:'Requirements Analysis',dur:10,deps:['t1'],color:'',notes:'Gather all stakeholder requirements',prog:60},
+      {id:'t3',name:'System Architecture',dur:8,deps:['t1'],color:'',notes:'Design the technical architecture',prog:30},
+      {id:'t4',name:'UI/UX Design',dur:12,deps:['t2'],color:'#8b5cf6',notes:'Wireframes and mockups',prog:0},
+      {id:'t5',name:'Backend Development',dur:20,deps:['t3'],color:'',notes:'Core API and database',prog:0},
+      {id:'t6',name:'Frontend Development',dur:18,deps:['t4'],color:'',notes:'React implementation',prog:0},
+      {id:'t7',name:'Integration & Testing',dur:8,deps:['t5','t6'],color:'',notes:'End-to-end testing',prog:0},
+      {id:'t8',name:'Documentation',dur:5,deps:['t2'],color:'#10b981',notes:'Technical docs',prog:0},
+      {id:'t9',name:'Deployment',dur:3,deps:['t7','t8'],color:'',notes:'Production release',prog:0},
+      {id:'t10',name:'Go Live',dur:0,deps:['t9'],color:'',notes:'Project milestone',prog:0}
+    ];
+  }
+
+  // Apply project settings
+  document.getElementById('projectName').value = S.project.name || 'My Project';
+  document.getElementById('projectName').addEventListener('input', function(e){
+    S.project.name = e.target.value;
+    document.title = (e.target.value||'Gantt') + ' – CritPath';
+    autoSave();
+  });
+
+  // View-only mode
+  if (S.viewOnly) document.body.classList.add('view-only');
+
+  // Theme
+  document.body.setAttribute('data-theme', S.project.theme || 'dark');
+  updateThemeIcon();
+
+  // Start date
+  if (!S.project.startDate) {
+    var td = new Date();
+    // Start on next Monday
+    var dow = td.getDay();
+    td.setDate(td.getDate() + (dow === 0 ? 1 : dow === 6 ? 2 : 8 - dow));
+    S.project.startDate = td.toISOString().split('T')[0];
+  }
+  document.getElementById('projStart').value = S.project.startDate;
+
+  // UI checkboxes
+  document.getElementById('chkNames').checked = S.ui.showNames !== false;
+  if (S.ui.showNames === false) document.getElementById('ganttInner').classList.add('hide-names');
+  document.getElementById('chkWe').checked   = S.ui.showWe !== false;
+  document.getElementById('chkArr').checked  = S.ui.showArr !== false;
+  document.getElementById('chkBars').checked = S.ui.showBars !== false;
+  document.getElementById('chkProg').checked = S.ui.showProg === true;
+
+  // Restore sidebar collapsed state
+  if (S.ui.sidebarCollapsed) {
+    var sb = document.getElementById('sidebar');
+    var icon = document.getElementById('sbToggleIcon');
+    var btn  = document.getElementById('sbToggle');
+    sb.classList.add('collapsed');
+    icon.innerHTML = '<path d="M2 1l5 5-5 5"/>';
+    btn.style.left = '0';
+  } else {
+    document.getElementById('sbToggle').style.left = 'var(--left-w)';
+  }
+
+  // Zoom buttons
+  document.querySelectorAll('.zoom-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.z === (S.ui.zoom||'weeks'));
+  });
+
+  // Import
+  document.addEventListener('click', closeCtx);
+
+  render();
+
+  // ── Iframe embedding: receive project data from parent ──
+  if (window.parent !== window) {
+    document.body.classList.add('in-iframe');
+    window.addEventListener('message', function(e) {
+      if (!e.data || e.data.type !== 'gantt-init') return;
+      var st = e.data.state;
+      if (!st || !st.tasks) return;
+      S = st;
+      document.getElementById('projectName').value = S.project.name || '';
+      document.getElementById('projStart').value   = S.project.startDate || '';
+      document.getElementById('chkWe').checked     = S.ui.showWe !== false;
+      document.getElementById('chkArr').checked    = S.ui.showArr !== false;
+      document.getElementById('chkProg').checked   = S.ui.showProg === true;
+      document.getElementById('chkNames').checked  = S.ui.showNames !== false;
+      document.getElementById('chkBars').checked   = S.ui.showBars !== false;
+      document.body.setAttribute('data-theme', S.project.theme || 'dark');
+      updateThemeIcon();
+      document.querySelectorAll('.zoom-btn').forEach(function(b){
+        b.classList.toggle('active', b.dataset.z === (S.ui.zoom || 'weeks'));
+      });
+      var sb = document.getElementById('sidebar');
+      if (S.ui.sidebarCollapsed) {
+        sb.classList.add('collapsed');
+        document.getElementById('sbToggleIcon').innerHTML = '<path d="M2 1l5 5-5 5"/>';
+        document.getElementById('sbToggle').style.left = '0';
+      } else {
+        sb.classList.remove('collapsed');
+        document.getElementById('sbToggle').style.left = 'var(--left-w)';
+      }
+      render();
+    });
+    // Signal ready to receive data
+    window.parent.postMessage({ type:'gantt-ready' }, '*');
+  }
+}
+
+// ─────────────────────────────────────────────
+// CPM ALGORITHM
+// ─────────────────────────────────────────────
+function computeCPM() {
+  var tasks = S.tasks;
+  if (!tasks.length) { C = {tasks:[],projectEnd:0,critical:[]}; return; }
+
+  // Build map
+  var map = {};
+  tasks.forEach(function(t){
+    map[t.id] = Object.assign({},t,{est:0,eft:0,lst:0,lft:0,float:0,freeFloat:0,isCritical:false});
+  });
+
+  // Successors map
+  var succ = {};
+  tasks.forEach(function(t){ succ[t.id] = []; });
+  tasks.forEach(function(t){
+    (t.deps||[]).forEach(function(d){
+      if (map[d]) succ[d].push(t.id);
+    });
+  });
+
+  // Topological sort (Kahn's)
+  var inDeg = {};
+  tasks.forEach(function(t){ inDeg[t.id] = 0; });
+  tasks.forEach(function(t){
+    (t.deps||[]).forEach(function(d){ if(map[d]) inDeg[t.id]++; });
+  });
+  var queue = tasks.filter(function(t){ return inDeg[t.id]===0; }).map(function(t){ return t.id; });
+  var order = [];
+  var seen  = {};
+  queue.forEach(function(id){ seen[id]=true; });
+  while (queue.length) {
+    var id = queue.shift();
+    order.push(id);
+    succ[id].forEach(function(sid){
+      inDeg[sid]--;
+      if (inDeg[sid]===0 && !seen[sid]) { seen[sid]=true; queue.push(sid); }
+    });
+  }
+  // Catch any nodes not reached (cycles) — add at end
+  tasks.forEach(function(t){ if (!seen[t.id]) order.push(t.id); });
+
+  // Forward pass
+  order.forEach(function(id){
+    var t = map[id];
+    var depEFTs = (t.deps||[]).filter(function(d){ return map[d]; }).map(function(d){ return map[d].eft; });
+    t.est = depEFTs.length ? Math.max.apply(null,depEFTs) : 0;
+    t.eft = t.est + (t.dur||0);
+  });
+
+  var projectEnd = Math.max.apply(null, order.map(function(id){ return map[id].eft; }));
+
+  // Backward pass
+  var rev = order.slice().reverse();
+  rev.forEach(function(id){
+    var t = map[id];
+    var succLSTs = succ[id].filter(function(s){ return map[s]; }).map(function(s){ return map[s].lst; });
+    t.lft = succLSTs.length ? Math.min.apply(null,succLSTs) : projectEnd;
+    t.lst = t.lft - (t.dur||0);
+    t.float = t.lst - t.est;
+    t.isCritical = Math.abs(t.float) < 0.001;
+  });
+
+  // Free float
+  order.forEach(function(id){
+    var t = map[id];
+    var succESTs = succ[id].filter(function(s){ return map[s]; }).map(function(s){ return map[s].est; });
+    t.freeFloat = succESTs.length ? Math.min.apply(null,succESTs) - t.eft : t.lft - t.eft;
+  });
+
+  // Preserve original task order (by S.tasks order)
+  C.tasks = tasks.map(function(t){ return map[t.id]; });
+  C.projectEnd = projectEnd;
+  C.critical = C.tasks.filter(function(t){ return t.isCritical; }).map(function(t){ return t.id; });
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function render() {
+  syncUIState();
+  computeCPM();
+  renderSidebar();
+  renderChart();
+  renderStats();
+  autoSave();
+}
+
+function toggleNames() {
+  render(); // syncUIState inside render will pick up the new checkbox value
+}
+
+function syncUIState() {
+  S.project.startDate = document.getElementById('projStart').value || S.project.startDate;
+  S.ui.showWe    = document.getElementById('chkWe').checked;
+  S.ui.showArr   = document.getElementById('chkArr').checked;
+  S.ui.showNames = document.getElementById('chkNames').checked;
+  S.ui.showBars  = document.getElementById('chkBars').checked;
+  S.ui.showProg  = document.getElementById('chkProg').checked;
+  // Keep CSS class in sync
+  document.getElementById('ganttInner').classList.toggle('hide-names', !S.ui.showNames);
+}
+
+function toggleSidebar() {
+  var sb   = document.getElementById('sidebar');
+  var icon = document.getElementById('sbToggleIcon');
+  var btn  = document.getElementById('sbToggle');
+  var collapsed = sb.classList.toggle('collapsed');
+  S.ui.sidebarCollapsed = collapsed;
+  // Flip arrow direction
+  icon.innerHTML = collapsed
+    ? '<path d="M2 1l5 5-5 5"/>'   // chevron right (expand)
+    : '<path d="M6 1L1 6l5 5"/>';  // chevron left (collapse)
+  // Move the toggle button to stay at the edge of the sidebar
+  btn.style.left = collapsed ? '0' : 'var(--left-w)';
+  autoSave();
+}
+
+// ── Sidebar ──
+function renderSidebar() {
+  var list = document.getElementById('taskList');
+  if (!C.tasks.length) {
+    list.innerHTML = '<div class="empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>No tasks yet.<br>Click Add to get started.</span></div>';
+    return;
+  }
+  list.innerHTML = '';
+  C.tasks.forEach(function(t){
+    var dot = t.color || (t.dur===0 ? '#f59e0b' : t.isCritical ? '#ef4444' : '#3b82f6');
+    var el = document.createElement('div');
+    el.className = 'task-item' + (S.ui.selId===t.id?' sel':'');
+    el.dataset.id = t.id;
+    el.draggable = true;
+    el.innerHTML =
+      '<div class="drag-handle" title="Drag to reorder"><svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg></div>'+
+      '<div class="t-dot" style="background:'+dot+'"></div>'+
+      '<div class="t-name" title="'+esc(t.name)+'">'+esc(t.name)+'</div>'+
+      '<div class="t-dur">'+(t.dur===0?'&#9830;':t.dur+'d')+'</div>'+
+      '<div class="t-acts">'+
+        '<button class="iBtn" title="Edit" onclick="openModal(\''+t.id+'\');event.stopPropagation()">'+svgEdit()+'</button>'+
+        '<button class="iBtn del" title="Delete" onclick="deleteTask(\''+t.id+'\');event.stopPropagation()">'+svgTrash()+'</button>'+
+      '</div>';
+    el.addEventListener('click', function(){ selectTask(t.id); });
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); if(!S.viewOnly) showCtx(e,t.id); });
+    el.addEventListener('dragstart',  function(e){ onDragStart(e, t.id); });
+    el.addEventListener('dragover',   function(e){ onDragOver(e, this); });
+    el.addEventListener('dragleave',  function(){ onDragLeave(this); });
+    el.addEventListener('drop',       function(e){ onDrop(e, t.id); });
+    el.addEventListener('dragend',    function(){ onDragEnd(); });
+    list.appendChild(el);
+  });
+}
+
+// ── Stats ──
+function renderStats() {
+  var el = document.getElementById('sbStats');
+  if (!C.tasks.length) { el.innerHTML=''; return; }
+  var days = C.projectEnd;
+  var weeks = (days/5).toFixed(1);
+  el.innerHTML =
+    '<span><strong>'+C.tasks.length+'</strong> tasks</span>'+
+    '<span style="color:var(--critical)"><strong>'+C.critical.length+'</strong> critical</span>'+
+    '<span><strong>'+days+'</strong>d / '+weeks+'w</span>';
+}
+
+// ── Chart ──
+var ZOOM = { months:8, weeks:20, days:42 };
+
+function cellW() { return ZOOM[S.ui.zoom] || 20; }
+
+function projStart() {
+  var s = S.project.startDate;
+  return s ? new Date(s+'T00:00:00') : new Date();
+}
+
+function addDays(base, n) {
+  var d = new Date(base);
+  d.setDate(d.getDate()+n);
+  return d;
+}
+
+function isWeekend(d) { var w=d.getDay(); return w===0||w===6; }
+
+function fmtDate(d) {
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function fmtFull(d) {
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
+function renderChart() {
+  var rows   = document.getElementById('ganttRows');
+  var tlCells= document.getElementById('tlCells');
+
+  if (!C.tasks.length) {
+    rows.innerHTML = '<div class="empty" style="height:300px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Add tasks to see the Gantt chart</span></div>';
+    tlCells.innerHTML = '';
+    return;
+  }
+
+  var cw = cellW();
+  var ps = projStart();
+  var totalDays = C.projectEnd + Math.max(60, Math.ceil(C.projectEnd*0.3));
+  var today = new Date();
+  var todayOff = Math.round((today - ps) / 864e5);
+  var showWe = S.ui.showWe;
+
+  // Build days array
+  var days = [];
+  for (var i=0; i<totalDays; i++) {
+    days.push({ i:i, d:addDays(ps,i), we:isWeekend(addDays(ps,i)) });
+  }
+
+  var chartW = totalDays * cw;
+  document.getElementById('ganttInner').style.minWidth = (260 + chartW) + 'px';
+
+  // Timeline
+  renderTimeline(tlCells, days, cw, todayOff, showWe);
+
+  // Rows
+  rows.innerHTML = '';
+  var ROW_H = 44;
+  var svgNS = 'http://www.w3.org/2000/svg';
+
+  // SVG for arrows
+  var depSvg = null;
+  if (S.ui.showArr) {
+    depSvg = document.createElementNS(svgNS,'svg');
+    depSvg.setAttribute('class','dep-svg');
+    depSvg.style.width  = chartW+'px';
+    depSvg.style.height = (C.tasks.length*ROW_H)+'px';
+    depSvg.style.left   = (S.ui.showNames !== false ? 260 : 0) + 'px';
+    depSvg.style.zIndex = '15';
+
+    // Markers
+    var defs = document.createElementNS(svgNS,'defs');
+    [
+      {id:'arr-n',  color:'#94a3b8', op:.5},
+      {id:'arr-cp', color:'#ef4444', op:.85}
+    ].forEach(function(m){
+      var mk = document.createElementNS(svgNS,'marker');
+      mk.setAttribute('id',m.id);
+      mk.setAttribute('markerWidth','7');
+      mk.setAttribute('markerHeight','5');
+      mk.setAttribute('refX','7');
+      mk.setAttribute('refY','2.5');
+      mk.setAttribute('orient','auto');
+      var poly = document.createElementNS(svgNS,'polygon');
+      poly.setAttribute('points','0 0,7 2.5,0 5');
+      poly.setAttribute('fill',m.color);
+      poly.setAttribute('opacity',m.op);
+      mk.appendChild(poly);
+      defs.appendChild(mk);
+    });
+    depSvg.appendChild(defs);
+  }
+
+  var rowIdx = {};
+  C.tasks.forEach(function(t,i){ rowIdx[t.id]=i; });
+
+  C.tasks.forEach(function(t,i){
+    var row = document.createElement('div');
+    row.className = 'g-row'+(S.ui.selId===t.id?' sel':'');
+    row.dataset.id = t.id;
+
+    // Left cell
+    var left = document.createElement('div');
+    left.className = 'g-row-left';
+    left.addEventListener('click', function(){ selectTask(t.id); });
+    left.addEventListener('contextmenu', function(e){ e.preventDefault(); if(!S.viewOnly) showCtx(e,t.id); });
+    var dot = t.color || (t.dur===0?'#f59e0b': t.isCritical?'#ef4444':'#3b82f6');
+    left.innerHTML =
+      '<div class="t-dot" style="background:'+dot+'"></div>'+
+      '<div class="rn" title="'+esc(t.name)+'">'+esc(t.name)+'</div>'+
+      (t.isCritical?'<div class="cp-badge">CP</div>':'');
+    row.appendChild(left);
+
+    // Right cell
+    var right = document.createElement('div');
+    right.className = 'g-row-right';
+    right.style.width = chartW+'px';
+
+    // Weekend shading + grid
+    days.forEach(function(day){
+      if (day.we && showWe) {
+        var shade = document.createElement('div');
+        shade.className = 'gl we';
+        shade.style.left = (day.i*cw)+'px';
+        shade.style.width = cw+'px';
+        right.appendChild(shade);
+      }
+      // Week separator (Monday)
+      if (day.d.getDay()===1) {
+        var gl = document.createElement('div');
+        gl.className = 'gl wk';
+        gl.style.left = (day.i*cw)+'px';
+        right.appendChild(gl);
+      }
+    });
+
+    // Task bar
+    var showBars = S.ui.showBars !== false;
+    if (showBars && t.dur === 0) {
+      // Milestone: diamond
+      var ms = document.createElement('div');
+      ms.className = 'tbar milestone';
+      ms.style.left   = (t.est*cw - 9)+'px';
+      ms.style.width  = '18px';
+      ms.style.height = '18px';
+      ms.style.top    = '13px';
+      ms.style.background = t.color || 'linear-gradient(135deg,#f59e0b,#d97706)';
+      ms.style.borderRadius = '0';
+      ms.style.transform = 'rotate(45deg)';
+      ms.addEventListener('mouseenter', function(e){ showTip(e,t,ps); });
+      ms.addEventListener('mousemove',  moveTip);
+      ms.addEventListener('mouseleave', hideTip);
+      ms.addEventListener('dblclick',   function(e){ e.stopPropagation(); if(!S.viewOnly) openModal(t.id); });
+      right.appendChild(ms);
+    } else if (showBars) {
+      var barLeft  = t.est * cw;
+      var barWidth = Math.max(t.dur * cw, 6);
+      var bar = document.createElement('div');
+      bar.className = 'tbar ' + (t.isCritical ? 'crit' : 'normal');
+      if (t.color) bar.style.background = t.color;
+      bar.style.left  = barLeft + 'px';
+      bar.style.width = barWidth + 'px';
+
+      // Progress fill
+      if (S.ui.showProg && t.prog > 0) {
+        var prog = document.createElement('div');
+        prog.className = 'tbar-prog';
+        prog.style.width = Math.min(t.prog||0, 100) + '%';
+        bar.appendChild(prog);
+      }
+
+      var lbl = document.createElement('div');
+      lbl.className = 'tbar-lbl';
+      lbl.textContent = t.name;
+      bar.appendChild(lbl);
+
+      var rsz = document.createElement('div');
+      rsz.className = 'tbar-resize';
+      bar.appendChild(rsz);
+
+      // Events
+      bar.addEventListener('mouseenter', function(e){ showTip(e,t,ps); });
+      bar.addEventListener('mousemove',  moveTip);
+      bar.addEventListener('mouseleave', hideTip);
+      bar.addEventListener('dblclick',   function(e){ e.stopPropagation(); if(!S.viewOnly) openModal(t.id); });
+      bar.addEventListener('contextmenu',function(e){ e.preventDefault(); hideTip(); showCtx(e,t.id); });
+
+      // Resize drag
+      rsz.addEventListener('mousedown', function(e){ startResize(e,t.id,bar); });
+
+      right.appendChild(bar);
+    }
+
+    row.appendChild(right);
+    rows.appendChild(row);
+
+    // Dependency arrows
+    if (depSvg && t.deps) {
+      t.deps.forEach(function(depId){
+        var dep = C.tasks.find(function(x){ return x.id===depId; });
+        if (!dep) return;
+        var fromRow = rowIdx[depId];
+        var toRow   = i;
+        var fromX   = dep.eft * cw;
+        var fromY   = fromRow * ROW_H + ROW_H/2;
+        var toX     = t.est * cw - 3;
+        var toY     = toRow * ROW_H + ROW_H/2;
+        var isCp    = dep.isCritical && t.isCritical;
+
+        // Elbow routing
+        var mid = fromX + Math.max(cw*0.6, 12);
+        var d;
+        if (toX > fromX + 4) {
+          // Normal forward arrow
+          var mx = (fromX + toX) / 2;
+          d = 'M '+fromX+' '+fromY+' C '+mx+' '+fromY+' '+mx+' '+toY+' '+toX+' '+toY;
+        } else {
+          // Wrap-around arrow
+          var bypass = Math.max(fromX, toX) + 20;
+          d = 'M '+fromX+' '+fromY+
+              ' L '+bypass+' '+fromY+
+              ' L '+bypass+' '+toY+
+              ' L '+toX+' '+toY;
+        }
+
+        var path = document.createElementNS(svgNS,'path');
+        path.setAttribute('d', d);
+        path.setAttribute('fill','none');
+        path.setAttribute('stroke', isCp?'#ef4444':'#94a3b8');
+        path.setAttribute('stroke-width', isCp?'1.8':'1.2');
+        path.setAttribute('opacity', isCp?'0.75':'0.4');
+        path.setAttribute('marker-end','url(#'+(isCp?'arr-cp':'arr-n')+')');
+        depSvg.appendChild(path);
+      });
+    }
+  });
+
+  if (depSvg) rows.appendChild(depSvg);
+
+  // Today line — full-height overlay on the rows container
+  if (todayOff >= 0 && todayOff < totalDays) {
+    var leftW = S.ui.showNames !== false ? 260 : 0;
+    var tlX = leftW + todayOff * cw;
+    var tl = document.createElement('div');
+    tl.className = 'today-line';
+    tl.style.left   = tlX + 'px';
+    tl.style.height = (C.tasks.length * ROW_H) + 'px';
+    rows.appendChild(tl);
+
+    var tlbl = document.createElement('div');
+    tlbl.className = 'today-label';
+    tlbl.style.left = (tlX + 2) + 'px';
+    tlbl.textContent = 'TODAY';
+    rows.appendChild(tlbl);
+  }
+}
+
+function renderTimeline(container, days, cw, todayOff, showWe) {
+  container.innerHTML = '';
+  var zoom = S.ui.zoom;
+
+  // Upper row: months
+  var upper = document.createElement('div');
+  upper.style.cssText = 'position:relative;height:26px;border-bottom:1px solid var(--border);display:flex;';
+
+  // Lower row: days/weeks
+  var lower = document.createElement('div');
+  lower.style.cssText = 'position:absolute;top:26px;left:0;display:flex;height:26px;';
+
+  var lastMonth = -1;
+  days.forEach(function(day){
+    // Month label
+    var mo = day.d.getMonth();
+    if (mo !== lastMonth) {
+      lastMonth = mo;
+      var mc = document.createElement('div');
+      mc.style.cssText = 'position:absolute;left:'+(day.i*cw)+'px;height:26px;padding:0 6px;display:flex;align-items:center;font-size:10px;font-weight:700;color:var(--text);white-space:nowrap;pointer-events:none';
+      mc.textContent = day.d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+      upper.appendChild(mc);
+    }
+
+    // Day/week cell
+    var cell = document.createElement('div');
+    cell.style.cssText = 'flex-shrink:0;width:'+cw+'px;height:26px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text2);border-right:1px solid var(--border);overflow:hidden;';
+
+    if (day.i === todayOff) {
+      cell.style.background = 'rgba(59,130,246,.15)';
+      cell.style.color = 'var(--accent)';
+      cell.style.fontWeight = '700';
+    } else if (day.we && showWe) {
+      cell.style.background = 'rgba(0,0,0,.05)';
+    }
+
+    if (zoom === 'days') {
+      cell.textContent = day.d.getDate();
+    } else if (zoom === 'weeks') {
+      if (day.d.getDay()===1) {
+        cell.textContent = 'W'+getWeekNum(day.d);
+        cell.style.fontWeight = '600';
+        cell.style.color = 'var(--text)';
+      }
+    } else { // months
+      if (day.d.getDate()===1 || day.d.getDate()===15) {
+        cell.textContent = day.d.getDate();
+      }
+    }
+
+    lower.appendChild(cell);
+  });
+
+  container.appendChild(upper);
+  container.appendChild(lower);
+}
+
+function getWeekNum(d) {
+  var dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var dayNum = dt.getUTCDay() || 7;
+  dt.setUTCDate(dt.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+  return Math.ceil((((dt - yearStart) / 864e5) + 1) / 7);
+}
+
+// ─────────────────────────────────────────────
+// INTERACTIONS
+// ─────────────────────────────────────────────
+function selectTask(id) {
+  S.ui.selId = S.ui.selId === id ? null : id;
+  render();
+}
+
+function setZoom(btn) {
+  document.querySelectorAll('.zoom-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  S.ui.zoom = btn.dataset.z;
+  render();
+}
+
+function toggleTheme() {
+  var cur = document.body.getAttribute('data-theme');
+  var nxt = cur==='dark'?'light':'dark';
+  document.body.setAttribute('data-theme', nxt);
+  S.project.theme = nxt;
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  var dark = document.body.getAttribute('data-theme')==='dark';
+  document.getElementById('themeIcon').innerHTML = dark
+    ? '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'
+    : '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+}
+
+// ─────────────────────────────────────────────
+// SIDEBAR DRAG-TO-REORDER
+// ─────────────────────────────────────────────
+var _dragId = null;
+
+function onDragStart(e, id) {
+  _dragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+  // Defer adding class so the ghost image is captured first
+  setTimeout(function(){
+    var el = document.querySelector('.task-item[data-id="'+id+'"]');
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+
+function onDragOver(e, el) {
+  if (!_dragId || el.dataset.id === _dragId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  // Remove drag-over from all, add to this one
+  document.querySelectorAll('.task-item').forEach(function(i){ i.classList.remove('drag-over'); });
+  el.classList.add('drag-over');
+}
+
+function onDragLeave(el) {
+  el.classList.remove('drag-over');
+}
+
+function onDrop(e, targetId) {
+  e.preventDefault();
+  if (!_dragId || _dragId === targetId) return;
+
+  var fromIdx = S.tasks.findIndex(function(t){ return t.id === _dragId; });
+  var toIdx   = S.tasks.findIndex(function(t){ return t.id === targetId; });
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  // Move the task
+  var moved = S.tasks.splice(fromIdx, 1)[0];
+  S.tasks.splice(toIdx, 0, moved);
+
+  _dragId = null;
+  render();
+}
+
+function onDragEnd() {
+  _dragId = null;
+  document.querySelectorAll('.task-item').forEach(function(el){
+    el.classList.remove('dragging','drag-over');
+  });
+}
+
+// Resize drag
+var _resizing = null;
+function startResize(e, taskId, bar) {
+  e.stopPropagation();
+  var startX = e.clientX;
+  var t = S.tasks.find(function(x){ return x.id===taskId; });
+  var origDur = t.dur;
+  var cw = cellW();
+  _resizing = taskId;
+  bar.classList.add('bar-dragging');
+
+  function onMove(e2) {
+    var dx = e2.clientX - startX;
+    var newDur = Math.max(1, Math.round(origDur + dx/cw));
+    t.dur = newDur;
+    bar.style.width = Math.max(newDur*cw,6)+'px';
+    bar.querySelector('.tbar-lbl').textContent = t.name+' ('+newDur+'d)';
+  }
+  function onUp() {
+    bar.classList.remove('bar-dragging');
+    _resizing = null;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    render();
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+var _editId = null;
+
+function openModal(taskId) {
+  _editId = taskId || null;
+  document.getElementById('modalTitle').textContent = taskId ? 'Edit Task' : 'Add Task';
+  document.getElementById('fId').value = taskId || '';
+
+  if (taskId) {
+    var t = S.tasks.find(function(x){ return x.id===taskId; });
+    if (t) {
+      document.getElementById('fName').value  = t.name;
+      document.getElementById('fDur').value   = t.dur;
+      document.getElementById('fProg').value  = t.prog||0;
+      document.getElementById('fColor').value = t.color||'';
+      document.getElementById('fNotes').value = t.notes||'';
+    }
+  } else {
+    document.getElementById('fName').value  = '';
+    document.getElementById('fDur').value   = '5';
+    document.getElementById('fProg').value  = '0';
+    document.getElementById('fColor').value = '';
+    document.getElementById('fNotes').value = '';
+  }
+
+  // Dep list
+  var dl = document.getElementById('depList');
+  var otherTasks = S.tasks.filter(function(t){ return t.id !== taskId; });
+  if (!otherTasks.length) {
+    dl.innerHTML = '<div class="dep-empty">No other tasks yet</div>';
+  } else {
+    var curDeps = taskId ? (S.tasks.find(function(t){ return t.id===taskId; })||{}).deps||[] : [];
+    dl.innerHTML = '';
+    otherTasks.forEach(function(t){
+      var opt = document.createElement('label');
+      opt.className = 'dep-opt';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = t.id;
+      cb.checked = curDeps.indexOf(t.id) > -1;
+      opt.appendChild(cb);
+      opt.appendChild(document.createTextNode(t.name + ' (' + t.dur + 'd)'));
+      dl.appendChild(opt);
+    });
+  }
+
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('fName').focus(); }, 80);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+
+function saveTask() {
+  var name = document.getElementById('fName').value.trim();
+  if (!name) { document.getElementById('fName').focus(); return; }
+
+  var dur   = Math.max(0, parseInt(document.getElementById('fDur').value)||0);
+  var prog  = Math.min(100, Math.max(0, parseInt(document.getElementById('fProg').value)||0));
+  var color = document.getElementById('fColor').value;
+  var notes = document.getElementById('fNotes').value.trim();
+  var deps  = Array.from(document.querySelectorAll('#depList input:checked')).map(function(cb){ return cb.value; });
+
+  if (_editId) {
+    var t = S.tasks.find(function(x){ return x.id===_editId; });
+    if (t) { t.name=name; t.dur=dur; t.prog=prog; t.color=color; t.notes=notes; t.deps=deps; }
+  } else {
+    S.tasks.push({ id:'t'+Date.now(), name:name, dur:dur, prog:prog, color:color, notes:notes, deps:deps });
+  }
+
+  closeModal();
+  render();
+}
+
+function deleteTask(id) {
+  if (!confirm('Delete "' + (S.tasks.find(function(t){return t.id===id;})||{name:'this task'}).name + '"?')) return;
+  S.tasks = S.tasks.filter(function(t){ return t.id!==id; });
+  S.tasks.forEach(function(t){ t.deps = (t.deps||[]).filter(function(d){ return d!==id; }); });
+  if (S.ui.selId===id) S.ui.selId = null;
+  render();
+}
+
+function duplicateTask(id) {
+  var t = S.tasks.find(function(x){ return x.id===id; });
+  if (!t) return;
+  var nt = Object.assign({}, t, { id:'t'+Date.now(), name:t.name+' (copy)', deps:[] });
+  var idx = S.tasks.findIndex(function(x){ return x.id===id; });
+  S.tasks.splice(idx+1, 0, nt);
+  render();
+}
+
+// ─────────────────────────────────────────────
+// CONTEXT MENU
+// ─────────────────────────────────────────────
+var _ctxId = null;
+function showCtx(e, id) {
+  _ctxId = id;
+  var ctx = document.getElementById('ctx');
+  ctx.style.display = 'block';
+  ctx.style.left = Math.min(e.clientX, window.innerWidth-180)+'px';
+  ctx.style.top  = Math.min(e.clientY, window.innerHeight-120)+'px';
+  e.stopPropagation();
+}
+function closeCtx() {
+  document.getElementById('ctx').style.display = 'none';
+  _ctxId = null;
+}
+document.getElementById('ctxEdit').addEventListener('click', function(){ if(_ctxId) openModal(_ctxId); closeCtx(); });
+document.getElementById('ctxDup').addEventListener('click',  function(){ if(_ctxId) duplicateTask(_ctxId); closeCtx(); });
+document.getElementById('ctxDel').addEventListener('click',  function(){ if(_ctxId) deleteTask(_ctxId); closeCtx(); });
+
+// ─────────────────────────────────────────────
+// TOOLTIP
+// ─────────────────────────────────────────────
+function showTip(e, t, ps) {
+  var tip = document.getElementById('tip');
+  document.getElementById('tipTitle').textContent = t.name;
+  document.getElementById('tipDur').textContent   = t.dur===0 ? 'Milestone' : t.dur+' days';
+  document.getElementById('tipStart').textContent = fmtDate(addDays(ps, t.est));
+  document.getElementById('tipEnd').textContent   = fmtDate(addDays(ps, t.eft));
+  document.getElementById('tipFloat').textContent = t.float+' days';
+  document.getElementById('tipFree').textContent  = t.freeFloat+' days';
+  document.getElementById('tipProg').textContent  = (t.prog||0)+'%';
+  document.getElementById('tipFloatRow').style.display = t.dur===0?'none':'flex';
+  document.getElementById('tipFreeRow').style.display  = t.dur===0?'none':'flex';
+  document.getElementById('tipProgRow').style.display  = S.ui.showProg?'flex':'none';
+  document.getElementById('tipCrit').style.display     = t.isCritical?'block':'none';
+  var notes = document.getElementById('tipNotes');
+  if (t.notes) { notes.textContent=t.notes; notes.style.display='block'; }
+  else notes.style.display='none';
+  tip.classList.add('vis');
+  moveTip(e);
+}
+function moveTip(e) {
+  var tip = document.getElementById('tip');
+  tip.style.left = Math.min(e.clientX+16, window.innerWidth-240)+'px';
+  tip.style.top  = Math.min(e.clientY-10, window.innerHeight-220)+'px';
+}
+function hideTip() { document.getElementById('tip').classList.remove('vis'); }
+
+// ─────────────────────────────────────────────
+// SAVE & SHARE
+// ─────────────────────────────────────────────
+function buildStateJson() {
+  return JSON.stringify({
+    tasks: S.tasks,
+    project: {
+      name: document.getElementById('projectName').value || S.project.name,
+      startDate: document.getElementById('projStart').value || S.project.startDate,
+      theme: document.body.getAttribute('data-theme')
+    },
+    ui: {
+      zoom: S.ui.zoom,
+      showWe:   document.getElementById('chkWe').checked,
+      showArr:  document.getElementById('chkArr').checked,
+      showNames: document.getElementById('chkNames').checked,
+      showBars: document.getElementById('chkBars').checked,
+      showProg: document.getElementById('chkProg').checked,
+      sidebarCollapsed: S.ui.sidebarCollapsed
+    }
+  }).replace(/</g,'\\u003c').replace(/>/g,'\\u003e');
+}
+
+function saveAsFile() {
+  var json = buildStateJson();
+  // Replace the embedded data script tag content
+  var html = document.documentElement.outerHTML;
+  html = html.replace(
+    /(<script id="gantt-data" type="application\/json">)([\s\S]*?)(<\/script>)/,
+    '$1' + json + '$3'
+  );
+  var blob = new Blob([html], { type:'text/html;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  var pname = (document.getElementById('projectName').value||'gantt').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  a.download = pname + '_gantt.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function saveReadOnly() {
+  var prev = S.viewOnly;
+  S.viewOnly = true;
+  var json = buildStateJson();
+  S.viewOnly = prev;
+  var html = document.documentElement.outerHTML;
+  html = html.replace(
+    /(<script id="gantt-data" type="application\/json">)([\s\S]*?)(<\/script>)/,
+    '$1' + json + '$3'
+  );
+  var blob = new Blob([html], { type:'text/html;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  var pname = (document.getElementById('projectName').value||'gantt').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  a.download = pname + '_view.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importFile() {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.html,text/html';
+  inp.onchange = function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try {
+        var html = ev.target.result;
+        var m = html.match(/<script id="gantt-data" type="application\/json">([\s\S]*?)<\/script>/);
+        if (m && m[1].trim() !== 'null') {
+          var d = JSON.parse(m[1]);
+          if (d && d.tasks) {
+            S = d;
+            document.getElementById('projectName').value = S.project.name||'';
+            document.getElementById('projStart').value   = S.project.startDate||'';
+            document.getElementById('chkWe').checked     = S.ui.showWe!==false;
+            document.getElementById('chkArr').checked    = S.ui.showArr!==false;
+            document.getElementById('chkProg').checked   = S.ui.showProg===true;
+            document.body.setAttribute('data-theme', S.project.theme||'dark');
+            updateThemeIcon();
+            document.querySelectorAll('.zoom-btn').forEach(function(b){
+              b.classList.toggle('active', b.dataset.z===(S.ui.zoom||'weeks'));
+            });
+            render();
+          }
+        } else {
+          alert('No Gantt data found in this file.\nMake sure you import a file previously saved by CritPath.');
+        }
+      } catch(err) {
+        alert('Import error: '+err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+// ─────────────────────────────────────────────
+// KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────
+document.addEventListener('keydown', function(e){
+  var isModal = document.getElementById('overlay').classList.contains('open');
+  var inInput = ['INPUT','TEXTAREA','SELECT'].indexOf(document.activeElement.tagName) > -1;
+
+  if (e.key==='Escape') { if(isModal) closeModal(); closeCtx(); return; }
+  if (e.key==='Enter' && isModal) { saveTask(); return; }
+
+  if (!isModal && !inInput) {
+    if (e.key==='Delete'||e.key==='Backspace') {
+      if (S.ui.selId) deleteTask(S.ui.selId);
+      return;
+    }
+    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n') { e.preventDefault(); openModal(); return; }
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s') { e.preventDefault(); if(window.parent!==window){sendDoneToParent();}else{saveAsFile();} return; }
+});
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function svgEdit() {
+  return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>';
+}
+function svgTrash() {
+  return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>';
+}
+
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
