@@ -175,10 +175,10 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authData.session.access_token}`,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
                         'apikey': SUPABASE_KEY
                     },
-                    body: JSON.stringify({ orgName })
+                    body: JSON.stringify({ orgName, userToken: authData.session.access_token })
                 });
                 const result = await resp.json();
                 if (!resp.ok) throw new Error(result.error || 'Failed to create organization');
