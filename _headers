@@ -10,7 +10,7 @@
   # then remove 'unsafe-inline' and add only the specific hash or nonce for any remaining
   # inline scripts. This is tracked as a follow-up hardening task.
   # 'strict-dynamic' is intentionally omitted until unsafe-inline is removed.
-  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://eu-assets.i.posthog.com; connect-src 'self' https://ikgybeldlngntrpyzcnh.supabase.co wss://ikgybeldlngntrpyzcnh.supabase.co https://eu.i.posthog.com; img-src 'self' data: https://placehold.co; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://eu-assets.i.posthog.com; connect-src 'self' https://ikgybeldlngntrpyzcnh.supabase.co wss://ikgybeldlngntrpyzcnh.supabase.co https://eu.i.posthog.com https://cdn.jsdelivr.net; img-src 'self' data: https://placehold.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'
 
 /gantt.html
   X-Frame-Options: SAMEORIGIN
