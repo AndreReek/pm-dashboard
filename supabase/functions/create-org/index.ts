@@ -31,19 +31,21 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request body — userToken is the user's JWT passed explicitly
-    // (Infrastructure-level JWT verification uses anon key; user identity is verified here)
-    const { orgName, userToken } = await req.json();
-    if (!userToken) throw new Error('Missing userToken in request body');
+    // Verify the calling user via their JWT (same pattern as create-checkout)
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('Missing authorization header');
+    const token = authHeader.replace('Bearer ', '');
 
-    // Verify the calling user via their JWT
     const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
     );
 
-    const { data: { user }, error: userErr } = await supabaseAuth.auth.getUser(userToken);
+    const { data: { user }, error: userErr } = await supabaseAuth.auth.getUser(token);
     if (userErr || !user) throw new Error('Unauthorized');
+
+    // Parse request body
+    const { orgName } = await req.json();
     if (!orgName || typeof orgName !== 'string' || orgName.trim().length === 0) {
       throw new Error('orgName is required');
     }

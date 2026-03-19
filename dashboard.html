@@ -756,10 +756,10 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Authorization': `Bearer ${session.access_token}`,
                         'apikey': SUPABASE_KEY
                     },
-                    body: JSON.stringify({ orgName, userToken: session.access_token })
+                    body: JSON.stringify({ orgName })
                 });
                 const setupResult = await setupResp.json();
                 if (!setupResp.ok) { toast('Setup failed: ' + (setupResult.error || 'unknown error'), 'error'); return; }
