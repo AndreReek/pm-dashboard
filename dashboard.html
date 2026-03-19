@@ -287,12 +287,21 @@
                 <button class="modal-close" onclick="closeUpgradeModal()">✕</button>
             </div>
             <p style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">Add your team, remove project limits, and move faster together.</p>
+            <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px;">
+                <span id="billingLabelMonthly" style="font-weight:600;">Mensile</span>
+                <label style="position:relative; display:inline-block; width:44px; height:24px; cursor:pointer;">
+                    <input type="checkbox" id="billingToggle" onchange="updateBillingToggle()" style="opacity:0; width:0; height:0;">
+                    <span style="position:absolute; inset:0; background:#cbd5e1; border-radius:24px; transition:.3s;"></span>
+                    <span id="billingToggleKnob" style="position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.3s;"></span>
+                </label>
+                <span id="billingLabelAnnual" style="font-weight:600;">Annuale <span style="background:#22c55e; color:white; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:4px;">-17%</span></span>
+            </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
                 <!-- Pro -->
                 <div style="border:2px solid var(--primary); border-radius:var(--radius-lg); padding:20px; position:relative;">
                     <div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:11px; font-weight:700; padding:2px 10px; border-radius:20px;">POPULAR</div>
                     <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Pro</div>
-                    <div style="font-size:28px; font-weight:800; color:var(--primary); margin-bottom:4px;">€19<span style="font-size:14px; font-weight:400; color:var(--text-secondary);">/month</span></div>
+                    <div style="font-size:28px; font-weight:800; color:var(--primary); margin-bottom:4px;">€<span data-price-monthly="19" data-price-annual="190">19</span><span style="font-size:14px; font-weight:400; color:var(--text-secondary);"><span data-period>/mese</span></span></div>
                     <ul style="font-size:12px; color:var(--text-secondary); padding-left:16px; margin:12px 0; line-height:1.8;">
                         <li>Up to <b>5 seats</b></li>
                         <li>Unlimited projects</li>
@@ -304,7 +313,7 @@
                 <!-- Studio -->
                 <div style="border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px;">
                     <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Studio</div>
-                    <div style="font-size:28px; font-weight:800; margin-bottom:4px;">€49<span style="font-size:14px; font-weight:400; color:var(--text-secondary);">/month</span></div>
+                    <div style="font-size:28px; font-weight:800; margin-bottom:4px;">€<span data-price-monthly="49" data-price-annual="490">49</span><span style="font-size:14px; font-weight:400; color:var(--text-secondary);"><span data-period>/mese</span></span></div>
                     <ul style="font-size:12px; color:var(--text-secondary); padding-left:16px; margin:12px 0; line-height:1.8;">
                         <li><b>Unlimited seats</b></li>
                         <li>Unlimited projects</li>
@@ -314,7 +323,7 @@
                     <button class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="startCheckout('studio')">Upgrade to Studio</button>
                 </div>
             </div>
-            <p style="font-size:11px; color:var(--text-muted); text-align:center;">Cancel anytime. Billed monthly. Secure payment via Stripe.</p>
+            <p style="font-size:11px; color:var(--text-muted); text-align:center;">Cancel anytime. Secure payment via Stripe.</p>
         </div>
     </div>
 
@@ -926,11 +935,33 @@
             document.getElementById('upgradeModal').classList.remove('active');
         }
 
+        let billingPeriod = 'monthly';
+        const PRICE_IDS = {
+            monthly: { pro: 'price_1T7f8CFAY0SgGV6JuTDa4ZZl', studio: 'price_1T7f8RFAY0SgGV6JzfQSGvaP' },
+            annual:  { pro: 'price_pro_annual', studio: 'price_studio_annual' }
+        };
+
+        function updateBillingToggle() {
+            const isAnnual = document.getElementById('billingToggle').checked;
+            billingPeriod = isAnnual ? 'annual' : 'monthly';
+            const knob = document.getElementById('billingToggleKnob');
+            const track = knob?.previousElementSibling;
+            if (knob) knob.style.transform = isAnnual ? 'translateX(20px)' : 'translateX(0)';
+            if (track) track.style.background = isAnnual ? '#6366f1' : '#cbd5e1';
+            document.querySelectorAll('[data-price-monthly]').forEach(el => {
+                el.textContent = isAnnual ? el.dataset.priceAnnual : el.dataset.priceMonthly;
+            });
+            document.querySelectorAll('[data-period]').forEach(el => {
+                el.textContent = isAnnual ? '/anno' : '/mese';
+            });
+        }
+
         async function startCheckout(plan) {
+            const priceId = PRICE_IDS[billingPeriod][plan];
             const { data: { session } } = await db.auth.getSession();
             if (!session) { toast('Please sign in first.', 'error'); return; }
 
-            posthog.capture('upgrade_clicked', { plan_selected: plan });
+            posthog.capture('upgrade_clicked', { plan_selected: plan, billing_period: billingPeriod });
 
             const btn = document.querySelector(`#upgradeModal button[onclick="startCheckout('${plan}')"]`);
             if (btn) { btn.textContent = 'Redirecting…'; btn.disabled = true; }
@@ -943,7 +974,7 @@
                         'Authorization': `Bearer ${session.access_token}`,
                         'apikey': SUPABASE_KEY,
                     },
-                    body: JSON.stringify({ plan }),
+                    body: JSON.stringify({ priceId }),
                 });
                 const json = await res.json();
                 if (json.error) throw new Error(json.error);
