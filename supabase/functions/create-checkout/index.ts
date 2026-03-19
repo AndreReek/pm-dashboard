@@ -46,10 +46,10 @@ serve(async (req) => {
       .single();
     if (!membership) throw new Error('No organization found');
 
-    const { plan } = await req.json(); // 'pro' | 'studio'
-    const priceId = plan === 'studio'
+    const { plan, priceId: explicitPriceId } = await req.json(); // 'pro' | 'studio', optional priceId override
+    const priceId = explicitPriceId ?? (plan === 'studio'
       ? Deno.env.get('STRIPE_STUDIO_PRICE_ID')
-      : Deno.env.get('STRIPE_PRO_PRICE_ID');
+      : Deno.env.get('STRIPE_PRO_PRICE_ID'));
     if (!priceId) throw new Error(`Price ID not configured for plan: ${plan}`);
 
     const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:3000';
