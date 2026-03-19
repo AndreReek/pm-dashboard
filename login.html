@@ -79,16 +79,6 @@
             if (session) window.location.href = 'dashboard.html';
         })();
 
-        // Default settings to clone for new orgs
-        const DEFAULT_SETTINGS = [
-            { key: 'tecnologie', value: ["AMR", "AGV", "Automated Wrapper", "Software", "Conveyor", "Vision System"] },
-            { key: 'brand', value: ["Agilox", "Kivnon", "Omron", "Otto", "Pieri", "Login Automation"] },
-            { key: 'stati_fornitura', value: ["Undefined", "Ordered", "In Stock", "Staged", "FAT Done", "Shipped", "Delivered"] },
-            { key: 'workflow_steps', value: ["1.0 Receipt of PO", "2.0 Internal Start-up", "3.0 Masterplan Update", "4.0 Project update in SAP", "5.0 Document Registration", "6.0 Internal Kick-off", "7.0 External Kick-off", "8.0 Email Recap After Meeting", "9.0 Documentation Sending", "10.0 FAT", "11.0 Project Charter Creation", "12.0 Share with Commissioning", "13.0 Pre-commissioning Meeting", "14.0 Commissioning & SAT", "15.0 Final Repository Update", "16.0 Handover to Service", "17.0 Project Closing", "18.0 Internal Retrospective", "19.0 Follow-up KA Meeting"] },
-            { key: 'categorie', value: ["executive", "trial", "non-project"] },
-            { key: 'priorita', value: ["high", "medium", "low"] }
-        ];
-
         function switchTab(tab) {
             document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
             document.getElementById('registerForm').style.display = tab === 'register' ? 'flex' : 'none';
@@ -176,30 +166,20 @@
                     return;
                 }
 
-                // 2. Create organization
-                const { data: org, error: orgError } = await db
-                    .from('organizations')
-                    .insert([{ name: orgName }])
-                    .select()
-                    .single();
-                if (orgError) throw orgError;
+                // 2. Bootstrap org server-side (bypasses RLS via service_role Edge Function)
+                //    Creates: organization, org_members (admin), default Settings rows
+                const resp = await fetch(`${SUPABASE_URL}/functions/v1/create-org`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authData.session.access_token}`
+                    },
+                    body: JSON.stringify({ orgName })
+                });
+                const result = await resp.json();
+                if (!resp.ok) throw new Error(result.error || 'Failed to create organization');
 
-                // 3. Link user to org
-                const { error: memberError } = await db
-                    .from('org_members')
-                    .insert([{ user_id: authData.user.id, org_id: org.id, role: 'admin' }]);
-                if (memberError) throw memberError;
-
-                // Subscription created automatically by DB trigger (create_trial_subscription)
-
-                // 4. Clone default settings for this org
-                const settingsRows = DEFAULT_SETTINGS.map(s => ({ ...s, org_id: org.id }));
-                const { error: settingsError } = await db
-                    .from('Settings')
-                    .insert(settingsRows);
-                if (settingsError) throw settingsError;
-
-                // 5. Redirect to dashboard
+                // 3. Redirect to dashboard
                 window.location.href = 'dashboard.html';
 
             } catch (err) {
