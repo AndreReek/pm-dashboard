@@ -64,19 +64,19 @@ serve(async (req) => {
       .single();
     if (orgError) throw new Error(`Failed to create organization: ${orgError.message}`);
 
-    // 2. Link user to org as admin
+    // 2. Link user to org as admin (ignore if already exists)
     const { error: memberError } = await supabaseAdmin
       .from('org_members')
-      .insert([{ user_id: user.id, org_id: org.id, role: 'admin' }]);
+      .upsert([{ user_id: user.id, org_id: org.id, role: 'admin' }], { onConflict: 'org_id,user_id', ignoreDuplicates: true });
     if (memberError) throw new Error(`Failed to create org membership: ${memberError.message}`);
 
     // Subscription row is created automatically by the DB trigger create_trial_subscription
 
-    // 3. Clone default settings for this org
+    // 3. Clone default settings for this org (ignore duplicates from previous partial attempts)
     const settingsRows = DEFAULT_SETTINGS.map((s) => ({ ...s, org_id: org.id }));
     const { error: settingsError } = await supabaseAdmin
       .from('Settings')
-      .insert(settingsRows);
+      .upsert(settingsRows, { onConflict: 'org_id,key', ignoreDuplicates: true });
     if (settingsError) throw new Error(`Failed to create default settings: ${settingsError.message}`);
 
     return new Response(
