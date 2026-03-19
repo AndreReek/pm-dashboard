@@ -1525,14 +1525,12 @@ kbd {
 .gantt-modal-overlay.active { display: flex; }
 .gantt-modal-box {
     width: 100%;
-    height: calc(100vh - 40px);
+    height: 100%;
     max-width: 1400px;
     border-radius: var(--radius-xl);
     overflow: hidden;
     box-shadow: 0 24px 80px rgba(0,0,0,0.5);
     animation: slideUp 0.25s ease;
-    display: flex;
-    flex-direction: column;
 }
 .gantt-modal-box iframe {
     width: 100%;

@@ -566,7 +566,7 @@ function init() {
   if (wrap && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(function() {
       clearTimeout(rTimer);
-      rTimer = setTimeout(render, 80);
+      rTimer = setTimeout(function() { if (C && C.tasks && C.tasks.length) render(); }, 80);
     }).observe(wrap);
   }
 })();
